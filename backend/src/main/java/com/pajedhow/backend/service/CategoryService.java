@@ -82,4 +82,10 @@ public class CategoryService {
         return productRepository.count() == 0 ? 0
                 : productRepository.search(null, slug, null, PageRequest.of(0, 1)).getTotalElements();
     }
+
+    public CategoryResponse findBySlug(String slug) {
+        categoryRepository.findBySlug(slug);
+
+        return findBySlug(slug);
+    }
 }

@@ -20,29 +20,29 @@ public class AdminUserController {
 
     private final UserService userService;
 
-    // ---- Staff (only SUPER_ADMIN manages team) ----
+    // ---- Staff (only ADMIN manages team) ----
     @GetMapping("/staff")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> staff() {
         return userService.listStaff();
     }
 
     @PostMapping("/staff")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public UserResponse createStaff(@Valid @RequestBody StaffRequest req) {
         return userService.createStaff(req);
     }
 
     @PutMapping("/staff/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public UserResponse updateStaff(@PathVariable String id, @Valid @RequestBody StaffRequest req) {
         return userService.updateStaff(id, req);
     }
 
     @DeleteMapping("/staff/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteStaff(@PathVariable String id) {
         userService.deleteUser(id);
     }
@@ -54,7 +54,7 @@ public class AdminUserController {
     }
 
     @PatchMapping("/customers/{id}/status")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public UserResponse setCustomerStatus(@PathVariable String id, @RequestBody Map<String, String> body) {
         return userService.setStatus(id, body.getOrDefault("status", "ACTIVE"));
     }

@@ -42,6 +42,6 @@ public class AppProperties {
     @Getter
     @Setter
     public static class WhatsApp {
-        private String phone = "255700000000";
+        private String phone = "2557";
     }
 }

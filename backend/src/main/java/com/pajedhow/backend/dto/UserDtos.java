@@ -35,7 +35,7 @@ public final class UserDtos {
             @NotBlank String name,
             @NotBlank @Email String email,
             String password,
-            @NotBlank String role,   // SUPER_ADMIN | MANAGER | EDITOR | SUPPORT
+            @NotBlank String role,   // ADMIN
             String status            // ACTIVE | INACTIVE
     ) {}
 

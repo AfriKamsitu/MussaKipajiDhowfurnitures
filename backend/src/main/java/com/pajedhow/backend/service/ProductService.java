@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -38,6 +39,13 @@ public class ProductService {
     public ProductResponse getBySlug(String slug) {
         return productRepository.findBySlug(slug).map(Mappers::toProduct)
                 .orElseThrow(() -> ResourceNotFoundException.of("Product", slug));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductResponse> featured(int limit) {
+        Pageable pageable = PageRequest.of(0, Math.max(1, limit), Sort.by("createdAt").descending());
+        return productRepository.findByStatus(ProductStatus.PUBLISHED, pageable)
+                .stream().map(Mappers::toProduct).toList();
     }
 
     @Transactional(readOnly = true)

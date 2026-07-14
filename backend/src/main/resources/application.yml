@@ -1,16 +1,18 @@
 server:
-  port: ${SERVER_PORT:8080}
+  port: 8080
   servlet:
     context-path: /
 
 spring:
   application:
-    name: pajedhow-backend
+    name: pajedhowfurnitures
+
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:pajedhow}?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:root}
+    url: jdbc:mysql://localhost:3306/pajedhowfurnitures?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: root
+    password: 0987654321
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -20,23 +22,31 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
     open-in-view: false
+
   jackson:
     default-property-inclusion: non_null
 
 # Application-specific settings
 app:
   jwt:
-    # Base64-encoded 256-bit secret. Override in production via APP_JWT_SECRET.
-    secret: ${APP_JWT_SECRET:5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
-    access-token-expiration-ms: ${APP_JWT_ACCESS_EXP:86400000}      # 24 hours
-    refresh-token-expiration-ms: ${APP_JWT_REFRESH_EXP:604800000}   # 7 days
+    # Base64-encoded 256-bit secret. Override in production.
+    secret: 5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437
+    access-token-expiration-ms: 86400000      # 24 hours
+    refresh-token-expiration-ms: 604800000    # 7 days
     issuer: pajedhow-backend
+
   cors:
-    allowed-origins: ${APP_CORS_ORIGINS:http://localhost:3000,http://localhost:5173}
+    allowed-origins:
+      - http://localhost:3000
+      - http://localhost:5173
+      - http://localhost:3001
+      - https://your-nextjs-app.vercel.app
+
   seed:
-    enabled: ${APP_SEED_ENABLED:true}
+    enabled: true
+
   whatsapp:
-    phone: ${APP_WHATSAPP_PHONE:255700000000}
+    phone: 255700000000
 
 logging:
   level:

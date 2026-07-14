@@ -16,10 +16,10 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     List<User> findByRole(Role role);
 
-    @Query("select u from User u where u.role <> com.pajedhow.backend.entity.Role.CUSTOMER")
+    @Query("select u from User u where u.role = com.pajedhow.backend.entity.Role.ADMIN")
     List<User> findAllStaff();
 
-    @Query("select u from User u where u.role = com.pajedhow.backend.entity.Role.CUSTOMER")
+    @Query("select u from User u where u.role = com.pajedhow.backend.entity.Role.BUYER")
     List<User> findAllCustomers();
 
     long countByRole(Role role);

@@ -25,20 +25,20 @@ public class AdminSupplierController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER','EDITOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public SupplierResponse create(@Valid @RequestBody SupplierRequest req) {
         return supplierService.create(req);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER','EDITOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public SupplierResponse update(@PathVariable Long id, @Valid @RequestBody SupplierRequest req) {
         return supplierService.update(id, req);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         supplierService.delete(id);
     }

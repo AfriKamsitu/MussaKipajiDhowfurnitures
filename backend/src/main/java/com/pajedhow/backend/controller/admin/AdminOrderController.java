@@ -37,20 +37,20 @@ public class AdminOrderController {
     /** Admin can create an order on behalf of a walk-in / phone customer. */
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER','SUPPORT')")
+    @PreAuthorize("hasRole('ADMIN')")
     public OrderResponse create(@Valid @RequestBody CreateOrderRequest req) {
         return orderService.create(req, null);
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER','SUPPORT')")
+    @PreAuthorize("hasRole('ADMIN')")
     public OrderResponse updateStatus(@PathVariable Long id, @Valid @RequestBody UpdateStatusRequest req) {
         return orderService.updateStatus(id, req);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         orderService.delete(id);
     }

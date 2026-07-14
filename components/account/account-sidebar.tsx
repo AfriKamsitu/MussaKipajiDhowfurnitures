@@ -11,7 +11,6 @@ import {
   LogOut,
   MapPin,
   Package,
-  ShieldCheck,
   ShoppingBag,
   Store,
   User as UserIcon,
@@ -120,16 +119,6 @@ export function AccountSidebar({ open, onClose }: { open: boolean; onClose: () =
               {accountNav.map((item) => (
                 <NavLink key={item.href} item={item} active={isActive(item.href)} onNavigate={onClose} />
               ))}
-              {user?.role === "admin" && (
-                <Link
-                  href="/admin"
-                  onClick={onClose}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                >
-                  <ShieldCheck className="size-[18px]" />
-                  <span className="flex-1">Admin Panel</span>
-                </Link>
-              )}
             </div>
           </div>
         </nav>

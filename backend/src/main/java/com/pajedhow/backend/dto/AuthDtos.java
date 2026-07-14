@@ -30,4 +30,9 @@ public final class AuthDtos {
     public record RefreshRequest(
             @NotBlank String refreshToken
     ) {}
+
+    public record SocialLoginRequest(
+            @NotBlank String provider,
+            @NotBlank String token
+    ) {}
 }

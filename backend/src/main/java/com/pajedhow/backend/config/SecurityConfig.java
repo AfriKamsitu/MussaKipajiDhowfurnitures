@@ -34,8 +34,8 @@ public class SecurityConfig {
     private final RestAuthenticationEntryPoint authenticationEntryPoint;
     private final AppProperties appProperties;
 
-    // Admin roles allowed to reach the admin surface.
-    private static final String[] ADMIN_ROLES = {"SUPER_ADMIN", "MANAGER", "EDITOR", "SUPPORT"};
+    // Only ADMIN may reach the admin surface.
+    private static final String[] ADMIN_ROLES = {"ADMIN"};
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -54,9 +54,14 @@ public class SecurityConfig {
                                 "/api/suppliers/**",
                                 "/api/banners/active",
                                 "/api/reviews/product/**",
-                                "/api/config/**").permitAll()
-                        // Customer-only: own account, orders, reviews, addresses
-                        .requestMatchers("/api/account/**").hasAnyRole("CUSTOMER", "SUPER_ADMIN", "MANAGER", "EDITOR", "SUPPORT")
+                                "/api/config/**",
+                                "/api/featured",
+                                "/api/cart").permitAll()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/checkout",
+                                "/api/cart").permitAll()
+                        // Buyer-only: own account, orders, reviews, addresses
+                        .requestMatchers("/api/account/**").hasAnyRole("BUYER", "ADMIN")
                         // Admin surface
                         .requestMatchers("/api/admin/**").hasAnyRole(ADMIN_ROLES)
                         // Everything else requires authentication

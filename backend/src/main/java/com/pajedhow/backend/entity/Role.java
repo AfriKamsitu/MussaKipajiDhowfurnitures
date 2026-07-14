@@ -1,23 +1,20 @@
 package com.pajedhow.backend.entity;
 
 /**
- * System roles. The four admin roles mirror the admin team roles used by the
- * frontend (Super Admin, Manager, Editor, Support); CUSTOMER is the buyer role.
+ * System roles for the backend. Only ADMIN is used for admin users, and BUYER
+ * is used for storefront customers.
  */
 public enum Role {
-    SUPER_ADMIN,
-    MANAGER,
-    EDITOR,
-    SUPPORT,
-    CUSTOMER;
+    ADMIN,
+    BUYER;
 
-    /** Spring Security authority name, e.g. ROLE_SUPER_ADMIN. */
+    /** Spring Security authority name, e.g. ROLE_ADMIN. */
     public String authority() {
         return "ROLE_" + name();
     }
 
-    /** True for any staff/admin role (everything except CUSTOMER). */
+    /** True for admin users only. */
     public boolean isAdmin() {
-        return this != CUSTOMER;
+        return this == ADMIN;
     }
 }

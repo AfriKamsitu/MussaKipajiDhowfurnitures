@@ -126,8 +126,8 @@ public class UserService {
             throw new BadRequestException("Password must be at least 6 characters");
         }
         Role role = parseRole(req.role());
-        if (role == Role.CUSTOMER) {
-            throw new BadRequestException("Use customer signup for customer accounts");
+        if (role != Role.ADMIN) {
+            throw new BadRequestException("Staff accounts must use role ADMIN");
         }
         User user = User.builder()
                 .name(req.name())
@@ -151,7 +151,11 @@ public class UserService {
             }
             user.setEmail(req.email().toLowerCase());
         }
-        user.setRole(parseRole(req.role()));
+        Role role = parseRole(req.role());
+        if (role != Role.ADMIN) {
+            throw new BadRequestException("Staff accounts must use role ADMIN");
+        }
+        user.setRole(role);
         user.setStatus(parseStatus(req.status()));
         if (req.password() != null && !req.password().isBlank()) {
             if (req.password().length() < 6) {

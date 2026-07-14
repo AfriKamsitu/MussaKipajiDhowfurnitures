@@ -25,20 +25,20 @@ public class AdminCategoryController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER','EDITOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public CategoryResponse create(@Valid @RequestBody CategoryRequest req) {
         return categoryService.create(req);
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER','EDITOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public CategoryResponse update(@PathVariable Long id, @Valid @RequestBody CategoryRequest req) {
         return categoryService.update(id, req);
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
         categoryService.delete(id);
     }

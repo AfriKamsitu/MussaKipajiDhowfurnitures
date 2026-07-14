@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -23,8 +24,24 @@ public class AdminDashboardController {
     private final ActivityLogService activityLogService;
 
     @GetMapping("/dashboard")
-    public DashboardResponse dashboard() {
-        return dashboardService.overview();
+    public Map<String, Object> dashboard() {
+        DashboardResponse data = dashboardService.overview();
+        return Map.of(
+                "success", true,
+                "message", "Admin dashboard ready",
+                "data", Map.of(
+                        "stats", data.stats(),
+                        "salesOverview", List.of(),
+                        "topSelling", data.topSelling(),
+                        "orderStatusBreakdown", data.orderStatusBreakdown(),
+                        "salesByCategory", List.of(),
+                        "productTabs", List.of(),
+                        "orderTabs", List.of(),
+                        "recentOrders", List.of(),
+                        "recentProducts", List.of(),
+                        "recentActivity", data.recentActivity()
+                )
+        );
     }
 
     @GetMapping("/activity")

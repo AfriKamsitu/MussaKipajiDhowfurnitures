@@ -30,20 +30,20 @@ public class AdminMarketingController {
 
     @PostMapping("/coupons")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public CouponResponse createCoupon(@Valid @RequestBody CouponRequest req) {
         return couponService.create(req);
     }
 
     @PutMapping("/coupons/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public CouponResponse updateCoupon(@PathVariable Long id, @Valid @RequestBody CouponRequest req) {
         return couponService.update(id, req);
     }
 
     @DeleteMapping("/coupons/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteCoupon(@PathVariable Long id) {
         couponService.delete(id);
     }
@@ -56,20 +56,20 @@ public class AdminMarketingController {
 
     @PostMapping("/banners")
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER','EDITOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public BannerResponse createBanner(@Valid @RequestBody BannerRequest req) {
         return bannerService.create(req);
     }
 
     @PutMapping("/banners/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER','EDITOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public BannerResponse updateBanner(@PathVariable Long id, @Valid @RequestBody BannerRequest req) {
         return bannerService.update(id, req);
     }
 
     @DeleteMapping("/banners/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER','EDITOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteBanner(@PathVariable Long id) {
         bannerService.delete(id);
     }
@@ -86,14 +86,14 @@ public class AdminMarketingController {
     }
 
     @PatchMapping("/reviews/{id}/status")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER','SUPPORT','EDITOR')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ReviewResponse moderate(@PathVariable Long id, @Valid @RequestBody ReviewStatusRequest req) {
         return reviewService.updateStatus(id, req);
     }
 
     @DeleteMapping("/reviews/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','MANAGER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public void deleteReview(@PathVariable Long id) {
         reviewService.delete(id);
     }

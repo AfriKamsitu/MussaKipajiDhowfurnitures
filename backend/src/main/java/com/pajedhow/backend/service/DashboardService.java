@@ -33,7 +33,7 @@ public class DashboardService {
     public DashboardResponse overview() {
         BigDecimal revenue = orderRepository.totalRevenue();
         long totalOrders = orderRepository.count();
-        long totalCustomers = userRepository.countByRole(Role.CUSTOMER);
+        long totalCustomers = userRepository.countByRole(Role.BUYER);
         long totalProducts = productRepository.countByStatus(ProductStatus.PUBLISHED);
 
         List<StatCard> stats = List.of(
