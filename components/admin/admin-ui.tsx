@@ -58,15 +58,27 @@ const badgeStyles: Record<string, string> = {
   Cancelled: "bg-red-50 text-red-700 ring-red-200",
 }
 
+function prettifyStatus(status: string) {
+  if (!status) return status
+  const normalized = status.replace(/_/g, " ")
+  if (normalized === normalized.toUpperCase()) {
+    return normalized
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+  }
+  return normalized
+}
+
 export function StatusBadge({ status }: { status: string }) {
+  const label = prettifyStatus(status)
   return (
     <span
       className={cn(
         "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset",
-        badgeStyles[status] ?? "bg-slate-100 text-slate-600 ring-slate-200",
+        badgeStyles[label] ?? "bg-slate-100 text-slate-600 ring-slate-200",
       )}
     >
-      {status}
+      {label}
     </span>
   )
 }

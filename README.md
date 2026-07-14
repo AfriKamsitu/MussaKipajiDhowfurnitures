@@ -1,33 +1,44 @@
-# website-ui-recreation
+# Paje Dhow Furniture
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+Next.js storefront with a thin `/api` gateway that proxies to the Spring Boot backend.
 
-## Built with v0
+## Run locally
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+1. Start the backend on port **8080** (Spring Boot in `backend/`).
+2. Copy env if needed: `.env.local` should contain:
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_e2slvGipAwjNYbQpBvCNXQEyLS5n)
+```env
+BACKEND_URL=http://localhost:8080
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
-## Getting Started
-
-First, run the development server:
+3. Start the frontend:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App: [http://localhost:3000](http://localhost:3000)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Auth roles
 
-## Learn More
+| Role | How created | After login |
+|------|-------------|-------------|
+| **ADMIN** | Seeded (`Pajedhowfurniture@gmail.com`) | `/admin` |
+| **BUYER** | Anyone who registers or uses Google/Facebook | `/account` |
 
-To learn more, take a look at the following resources:
+Admin login:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+- Email: `Pajedhowfurniture@gmail.com`
+- Password: `Mussa@paje2026`
+
+Public registration and social login always create a **BUYER**. Admins cannot use Google/Facebook.
+
+### Social login setup
+
+1. Create a Google OAuth **Web** client ID and set `NEXT_PUBLIC_GOOGLE_CLIENT_ID`.
+2. Create a Facebook app, add Facebook Login, and set `NEXT_PUBLIC_FACEBOOK_APP_ID`.
+3. Restart `pnpm dev` after changing env values.
+
+The frontend obtains a provider access token and sends it to `POST /api/auth/social`, which the Next.js gateway proxies to Spring Boot for verification.

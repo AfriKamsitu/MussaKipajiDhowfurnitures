@@ -1,29 +1,68 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { Eye, Filter, Search } from "lucide-react"
 import { StatusBadge } from "@/components/admin/admin-ui"
-import { adminOrders, orderTabs, formatTZS } from "@/lib/admin-data"
+import { formatTZS, prettifyStatus } from "@/lib/admin-data"
+import { fetchApi } from "@/lib/api"
+import type { SpringPage } from "@/lib/data"
+
+type AdminOrder = {
+  id: string
+  numericId: string
+  customer: string
+  date: string
+  total: number
+  payment: string
+  status: string
+}
 
 export function OrdersTable() {
   const [tab, setTab] = useState("All Orders")
   const [query, setQuery] = useState("")
+  const [orders, setOrders] = useState<AdminOrder[]>([])
+
+  useEffect(() => {
+    fetchApi<SpringPage<Record<string, unknown>>>("/api/admin/orders?size=50")
+      .then((payload) => {
+        const content = Array.isArray(payload?.content) ? payload.content : []
+        setOrders(
+          content.map((o) => ({
+            id: String(o.orderNumber ?? o.id),
+            numericId: String(o.id),
+            customer: String(o.customerName ?? "—"),
+            date: o.createdAt ? new Date(String(o.createdAt)).toLocaleDateString() : "—",
+            total: Number(o.total ?? 0),
+            payment: String(o.payment ?? "—"),
+            status: prettifyStatus(String(o.status ?? "Pending")),
+          })),
+        )
+      })
+      .catch(() => setOrders([]))
+  }, [])
+
+  const tabs = useMemo(() => {
+    const statuses = ["Pending", "Processing", "Shipped", "Delivered", "Cancelled"]
+    const counts: Record<string, number> = { "All Orders": orders.length }
+    for (const s of statuses) counts[s] = orders.filter((o) => o.status === s).length
+    return Object.entries(counts).map(([label, count]) => ({ label, count }))
+  }, [orders])
 
   const filtered = useMemo(() => {
-    return adminOrders.filter((o) => {
+    return orders.filter((o) => {
       const matchesTab = tab === "All Orders" || o.status === tab
       const matchesQuery =
         o.id.toLowerCase().includes(query.toLowerCase()) ||
         o.customer.toLowerCase().includes(query.toLowerCase())
       return matchesTab && matchesQuery
     })
-  }, [tab, query])
+  }, [orders, tab, query])
 
   return (
     <div className="rounded-xl border border-border bg-card shadow-sm">
       <div className="flex flex-wrap items-center gap-1 border-b border-border px-4 pt-4">
-        {orderTabs.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.label}
             onClick={() => setTab(t.label)}
@@ -32,7 +71,11 @@ export function OrdersTable() {
             }`}
           >
             {t.label}
-            <span className={`rounded-full px-1.5 py-0.5 text-[11px] ${tab === t.label ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"}`}>
+            <span
+              className={`rounded-full px-1.5 py-0.5 text-[11px] ${
+                tab === t.label ? "bg-primary/10 text-primary" : "bg-secondary text-muted-foreground"
+              }`}
+            >
               {t.count}
             </span>
             {tab === t.label && <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary" />}
@@ -60,30 +103,32 @@ export function OrdersTable() {
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-y border-border bg-secondary/50 text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-4 py-3 font-medium">Order ID</th>
+              <th className="px-4 py-3 font-medium">Order</th>
               <th className="px-4 py-3 font-medium">Customer</th>
               <th className="px-4 py-3 font-medium">Date</th>
               <th className="px-4 py-3 font-medium">Total</th>
-              <th className="px-4 py-3 font-medium">Payment Method</th>
+              <th className="px-4 py-3 font-medium">Payment</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {filtered.map((o) => (
-              <tr key={o.id} className="transition-colors hover:bg-secondary/40">
+              <tr key={o.numericId} className="transition-colors hover:bg-secondary/40">
                 <td className="px-4 py-3 font-medium text-foreground">{o.id}</td>
-                <td className="px-4 py-3 text-foreground">{o.customer}</td>
+                <td className="px-4 py-3 text-muted-foreground">{o.customer}</td>
                 <td className="px-4 py-3 text-muted-foreground">{o.date}</td>
                 <td className="px-4 py-3 font-medium text-foreground">{formatTZS(o.total)}</td>
                 <td className="px-4 py-3 text-muted-foreground">{o.payment}</td>
-                <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
                 <td className="px-4 py-3">
-                  <div className="flex justify-end">
+                  <StatusBadge status={o.status} />
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center justify-end">
                     <Link
-                      href={`/admin/orders/${o.id.replace("#", "")}`}
+                      href={`/admin/orders/${o.numericId}`}
                       className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
-                      aria-label={`View ${o.id}`}
+                      aria-label="View order"
                     >
                       <Eye className="size-4" />
                     </Link>
@@ -93,22 +138,6 @@ export function OrdersTable() {
             ))}
           </tbody>
         </table>
-      </div>
-
-      <div className="flex flex-col items-center justify-between gap-3 border-t border-border px-4 py-3 sm:flex-row">
-        <p className="text-sm text-muted-foreground">Showing 1 to 7 of 348 results</p>
-        <div className="flex items-center gap-1">
-          {[1, 2, 3].map((n) => (
-            <button
-              key={n}
-              className={`flex size-8 items-center justify-center rounded-md text-sm ${n === 1 ? "bg-primary text-primary-foreground" : "border border-border text-foreground hover:bg-secondary"}`}
-            >
-              {n}
-            </button>
-          ))}
-          <span className="px-1 text-muted-foreground">…</span>
-          <button className="flex size-8 items-center justify-center rounded-md border border-border text-sm text-foreground hover:bg-secondary">50</button>
-        </div>
       </div>
     </div>
   )

@@ -1,9 +1,24 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { categories } from "@/lib/data"
 import { SectionHeading } from "@/components/section-heading"
+import { fetchApi } from "@/lib/api"
+import { normalizeCategory, type Category } from "@/lib/data"
 
 export function ShopByCategory() {
+  const [categories, setCategories] = useState<Category[]>([])
+
+  useEffect(() => {
+    fetchApi<Record<string, unknown>[]>("/api/categories")
+      .then((payload) => {
+        const list = Array.isArray(payload) ? payload : []
+        setCategories(list.map(normalizeCategory))
+      })
+      .catch(() => setCategories([]))
+  }, [])
+
   return (
     <section>
       <SectionHeading

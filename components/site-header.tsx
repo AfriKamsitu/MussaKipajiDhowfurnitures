@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import Image from "next/image"
 import { ChevronDown, Heart, Menu, Search, ShoppingCart, User, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { categories } from "@/lib/data"
+import { fetchApi } from "@/lib/api"
+import { normalizeCategory, type Category } from "@/lib/data"
 import { useStore } from "@/components/store-provider"
 import { useAuth } from "@/components/auth-provider"
 
@@ -29,6 +30,16 @@ export function SiteHeader() {
   const [query, setQuery] = useState("")
   const [menuOpen, setMenuOpen] = useState(false)
   const [catOpen, setCatOpen] = useState(false)
+  const [categories, setCategories] = useState<Category[]>([])
+
+  useEffect(() => {
+    fetchApi<Record<string, unknown>[]>("/api/categories")
+      .then((payload) => {
+        const list = Array.isArray(payload) ? payload : []
+        setCategories(list.map(normalizeCategory))
+      })
+      .catch(() => setCategories([]))
+  }, [])
 
   function onSearch(e: React.FormEvent) {
     e.preventDefault()
@@ -112,12 +123,14 @@ export function SiteHeader() {
               <span className="hidden text-[11px] sm:block">Cart</span>
             </Link>
             <Link
-              href={user ? "/account" : "/login"}
+              href={user ? (user.role === "admin" ? "/admin" : "/account") : "/login"}
               className="flex flex-col items-center gap-0.5 text-foreground"
               aria-label={user ? "Account" : "Login"}
             >
               <User className="size-5" />
-              <span className="hidden text-[11px] sm:block">{user ? user.name.split(" ")[0] || "Account" : "Login"}</span>
+              <span className="hidden text-[11px] sm:block">
+                {user ? (user.role === "admin" ? "Admin" : user.name.split(" ")[0] || "Account") : "Login"}
+              </span>
             </Link>
           </div>
         </div>

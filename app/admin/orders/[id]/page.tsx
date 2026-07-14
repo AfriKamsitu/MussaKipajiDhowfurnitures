@@ -1,22 +1,96 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Image from "next/image"
+import { useParams } from "next/navigation"
 import { Check, Printer } from "lucide-react"
 import { AdminCard, AdminPageHeader, StatusBadge } from "@/components/admin/admin-ui"
-import { orderDetail, formatTZS } from "@/lib/admin-data"
+import { formatTZS, prettifyStatus } from "@/lib/admin-data"
+import { fetchApi } from "@/lib/api"
 
-export default async function OrderDetailsPage({
-  params,
-}: {
-  params: Promise<{ id: string }>
-}) {
-  const { id } = await params
-  const order = orderDetail
-  const orderId = `#${id}`
+type OrderDetail = {
+  id: string
+  orderNumber: string
+  date: string
+  payment: string
+  paymentStatus: string
+  status: string
+  total: number
+  subtotal: number
+  delivery: number
+  customer: string
+  address: string
+  phone: string
+  items: Array<{ name: string; image: string; price: number; qty: number }>
+  timeline: Array<{ label: string; at: string; done: boolean }>
+}
+
+export default function OrderDetailsPage() {
+  const params = useParams<{ id: string }>()
+  const id = params.id
+  const [order, setOrder] = useState<OrderDetail | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!id) return
+    fetchApi<Record<string, unknown>>(`/api/admin/orders/${id}`)
+      .then((raw) => {
+        setOrder({
+          id: String(raw.id),
+          orderNumber: String(raw.orderNumber ?? raw.id),
+          date: raw.createdAt ? new Date(String(raw.createdAt)).toLocaleString() : "—",
+          payment: String(raw.payment ?? "—"),
+          paymentStatus: prettifyStatus(String(raw.paymentStatus ?? "")),
+          status: prettifyStatus(String(raw.status ?? "")),
+          total: Number(raw.total ?? 0),
+          subtotal: Number(raw.subtotal ?? 0),
+          delivery: Number(raw.delivery ?? 0),
+          customer: String(raw.customerName ?? "—"),
+          address: String(raw.shippingAddress ?? "—"),
+          phone: String(raw.phone ?? "—"),
+          items: Array.isArray(raw.items)
+            ? (raw.items as Record<string, unknown>[]).map((it) => ({
+                name: String(it.name ?? ""),
+                image: String(it.image ?? "/placeholder.svg"),
+                price: Number(it.price ?? 0),
+                qty: Number(it.quantity ?? 1),
+              }))
+            : [],
+          timeline: Array.isArray(raw.timeline)
+            ? (raw.timeline as Record<string, unknown>[]).map((step) => ({
+                label: String(step.label ?? ""),
+                at: step.at ? new Date(String(step.at)).toLocaleString() : "",
+                done: Boolean(step.done),
+              }))
+            : [],
+        })
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load order"))
+  }, [id])
+
+  if (error) {
+    return (
+      <div>
+        <AdminPageHeader title="Order Details" breadcrumb={["Dashboard", "Orders"]} />
+        <p className="text-sm text-destructive">{error}</p>
+      </div>
+    )
+  }
+
+  if (!order) {
+    return (
+      <div>
+        <AdminPageHeader title="Order Details" breadcrumb={["Dashboard", "Orders"]} />
+        <p className="text-sm text-muted-foreground">Loading order…</p>
+      </div>
+    )
+  }
 
   return (
     <div>
       <AdminPageHeader
         title="Order Details"
-        breadcrumb={["Dashboard", "Orders", orderId]}
+        breadcrumb={["Dashboard", "Orders", order.orderNumber]}
         actions={
           <>
             <StatusBadge status={order.status} />
@@ -29,13 +103,12 @@ export default async function OrderDetailsPage({
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Left: info + shipping */}
         <div className="space-y-6">
           <AdminCard>
             <h2 className="mb-4 text-base font-semibold text-foreground">Order Information</h2>
             <dl className="space-y-3 text-sm">
               {[
-                ["Order ID", orderId],
+                ["Order ID", order.orderNumber],
                 ["Order Date", order.date],
                 ["Payment Method", order.payment],
               ].map(([k, v]) => (
@@ -46,11 +119,15 @@ export default async function OrderDetailsPage({
               ))}
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Payment Status</dt>
-                <dd><StatusBadge status={order.paymentStatus} /></dd>
+                <dd>
+                  <StatusBadge status={order.paymentStatus} />
+                </dd>
               </div>
               <div className="flex justify-between gap-4">
                 <dt className="text-muted-foreground">Order Status</dt>
-                <dd><StatusBadge status={order.status} /></dd>
+                <dd>
+                  <StatusBadge status={order.status} />
+                </dd>
               </div>
               <div className="flex justify-between gap-4 border-t border-border pt-3">
                 <dt className="text-muted-foreground">Total Amount</dt>
@@ -67,7 +144,6 @@ export default async function OrderDetailsPage({
           </AdminCard>
         </div>
 
-        {/* Right: items + timeline */}
         <div className="space-y-6 lg:col-span-2">
           <AdminCard className="p-0">
             <h2 className="px-5 pt-5 text-base font-semibold text-foreground">Order Items</h2>
@@ -94,7 +170,9 @@ export default async function OrderDetailsPage({
                       </td>
                       <td className="px-5 py-3 text-muted-foreground">{formatTZS(it.price)}</td>
                       <td className="px-5 py-3 text-muted-foreground">{it.qty}</td>
-                      <td className="px-5 py-3 text-right font-medium text-foreground">{formatTZS(it.price * it.qty)}</td>
+                      <td className="px-5 py-3 text-right font-medium text-foreground">
+                        {formatTZS(it.price * it.qty)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -107,7 +185,9 @@ export default async function OrderDetailsPage({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Delivery Fee</span>
-                <span className="font-medium text-foreground">{order.delivery === 0 ? "TZS 0" : formatTZS(order.delivery)}</span>
+                <span className="font-medium text-foreground">
+                  {order.delivery === 0 ? "TZS 0" : formatTZS(order.delivery)}
+                </span>
               </div>
               <div className="flex justify-between border-t border-border pt-2">
                 <span className="font-semibold text-foreground">Total</span>
@@ -124,7 +204,11 @@ export default async function OrderDetailsPage({
                   {i < order.timeline.length - 1 && (
                     <span className="absolute left-3 top-3 h-[calc(100%+1.5rem)] w-px bg-emerald-300 sm:left-1/2 sm:top-3 sm:h-px sm:w-full" />
                   )}
-                  <span className="relative z-10 flex size-6 items-center justify-center rounded-full bg-emerald-500 text-primary-foreground">
+                  <span
+                    className={`relative z-10 flex size-6 items-center justify-center rounded-full ${
+                      step.done ? "bg-emerald-500 text-primary-foreground" : "bg-secondary text-muted-foreground"
+                    }`}
+                  >
                     <Check className="size-3.5" />
                   </span>
                   <span className="text-sm font-medium text-foreground">{step.label}</span>

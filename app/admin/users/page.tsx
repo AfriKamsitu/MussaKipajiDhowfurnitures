@@ -1,19 +1,51 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { AdminPageHeader, PrimaryButton, StatusBadge } from "@/components/admin/admin-ui"
-import { adminUsers } from "@/lib/admin-data"
+import { fetchApi } from "@/lib/api"
+import { prettifyStatus } from "@/lib/admin-data"
 
-function initials(name: string) {
-  return name.split(" ").map((n) => n[0]).slice(0, 2).join("")
+type UserRow = {
+  id: string
+  name: string
+  email: string
+  role: string
+  status: string
+  lastActive: string
 }
 
-const roleStyles: Record<string, string> = {
-  "Super Admin": "bg-violet-50 text-violet-700 ring-violet-200",
-  Manager: "bg-sky-50 text-sky-700 ring-sky-200",
-  Editor: "bg-amber-50 text-amber-700 ring-amber-200",
-  Support: "bg-slate-100 text-slate-600 ring-slate-200",
+function initials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join("")
 }
 
 export default function AdminUsersPage() {
+  const [users, setUsers] = useState<UserRow[]>([])
+
+  useEffect(() => {
+    fetchApi<Record<string, unknown>[]>("/api/admin/staff")
+      .then((payload) => {
+        const list = Array.isArray(payload) ? payload : []
+        setUsers(
+          list.map((u) => ({
+            id: String(u.id),
+            name: String(u.name ?? ""),
+            email: String(u.email ?? ""),
+            role: prettifyStatus(String(u.role ?? "Admin")),
+            status: prettifyStatus(String(u.status ?? "Active")),
+            lastActive: u.lastActiveAt
+              ? new Date(String(u.lastActiveAt)).toLocaleString()
+              : "—",
+          })),
+        )
+      })
+      .catch(() => setUsers([]))
+  }, [])
+
   return (
     <div>
       <AdminPageHeader
@@ -41,30 +73,38 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {adminUsers.map((u) => (
+              {users.map((u) => (
                 <tr key={u.id} className="transition-colors hover:bg-secondary/40">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                        {initials(u.name)}
+                        {initials(u.name || "?")}
                       </span>
                       <span className="font-medium text-foreground">{u.name}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${roleStyles[u.role]}`}>
+                    <span className="inline-flex items-center rounded-full bg-violet-50 px-2.5 py-0.5 text-xs font-medium text-violet-700 ring-1 ring-inset ring-violet-200">
                       {u.role}
                     </span>
                   </td>
-                  <td className="px-4 py-3"><StatusBadge status={u.status} /></td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={u.status} />
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{u.lastActive}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
-                      <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-primary" aria-label="Edit">
+                      <button
+                        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+                        aria-label="Edit"
+                      >
                         <Pencil className="size-4" />
                       </button>
-                      <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-50 hover:text-destructive" aria-label="Delete">
+                      <button
+                        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-50 hover:text-destructive"
+                        aria-label="Delete"
+                      >
                         <Trash2 className="size-4" />
                       </button>
                     </div>

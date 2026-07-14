@@ -1,6 +1,20 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import { Check, Star, Trash2 } from "lucide-react"
 import { AdminCard, AdminPageHeader, StatusBadge } from "@/components/admin/admin-ui"
-import { adminReviews } from "@/lib/admin-data"
+import { fetchApi } from "@/lib/api"
+import { prettifyStatus } from "@/lib/admin-data"
+
+type ReviewRow = {
+  id: string
+  customer: string
+  product: string
+  rating: number
+  comment: string
+  date: string
+  status: string
+}
 
 function Stars({ rating }: { rating: number }) {
   return (
@@ -16,12 +30,33 @@ function Stars({ rating }: { rating: number }) {
 }
 
 export default function AdminReviewsPage() {
+  const [reviews, setReviews] = useState<ReviewRow[]>([])
+
+  useEffect(() => {
+    fetchApi<Record<string, unknown>[]>("/api/admin/reviews")
+      .then((payload) => {
+        const list = Array.isArray(payload) ? payload : []
+        setReviews(
+          list.map((r) => ({
+            id: String(r.id),
+            customer: String(r.customerName ?? ""),
+            product: String(r.productName ?? ""),
+            rating: Number(r.rating ?? 0),
+            comment: String(r.comment ?? ""),
+            date: r.createdAt ? new Date(String(r.createdAt)).toLocaleDateString() : "—",
+            status: prettifyStatus(String(r.status ?? "Pending")),
+          })),
+        )
+      })
+      .catch(() => setReviews([]))
+  }, [])
+
   return (
     <div>
       <AdminPageHeader title="Reviews" breadcrumb={["Dashboard", "Reviews"]} />
 
       <div className="grid grid-cols-1 gap-4">
-        {adminReviews.map((r) => (
+        {reviews.map((r) => (
           <AdminCard key={r.id}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div className="min-w-0">
@@ -42,13 +77,17 @@ export default function AdminReviewsPage() {
                     Approve
                   </button>
                 )}
-                <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-50 hover:text-destructive" aria-label="Delete">
+                <button
+                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-50 hover:text-destructive"
+                  aria-label="Delete"
+                >
                   <Trash2 className="size-4" />
                 </button>
               </div>
             </div>
           </AdminCard>
         ))}
+        {!reviews.length && <p className="text-sm text-muted-foreground">No reviews yet</p>}
       </div>
     </div>
   )

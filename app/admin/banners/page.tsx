@@ -1,9 +1,40 @@
+"use client"
+
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import { AdminPageHeader, PrimaryButton, StatusBadge } from "@/components/admin/admin-ui"
-import { adminBanners } from "@/lib/admin-data"
+import { fetchApi } from "@/lib/api"
+import { prettifyStatus } from "@/lib/admin-data"
+
+type BannerRow = {
+  id: string
+  title: string
+  location: string
+  image: string
+  status: string
+}
 
 export default function AdminBannersPage() {
+  const [banners, setBanners] = useState<BannerRow[]>([])
+
+  useEffect(() => {
+    fetchApi<Record<string, unknown>[]>("/api/admin/banners")
+      .then((payload) => {
+        const list = Array.isArray(payload) ? payload : []
+        setBanners(
+          list.map((b) => ({
+            id: String(b.id),
+            title: String(b.title ?? ""),
+            location: String(b.location ?? ""),
+            image: String(b.image ?? "/placeholder.svg"),
+            status: prettifyStatus(String(b.status ?? "Active")),
+          })),
+        )
+      })
+      .catch(() => setBanners([]))
+  }, [])
+
   return (
     <div>
       <AdminPageHeader
@@ -30,7 +61,7 @@ export default function AdminBannersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {adminBanners.map((b) => (
+              {banners.map((b) => (
                 <tr key={b.id} className="transition-colors hover:bg-secondary/40">
                   <td className="px-4 py-3">
                     <span className="relative block h-12 w-20 overflow-hidden rounded-lg bg-secondary">
@@ -39,13 +70,21 @@ export default function AdminBannersPage() {
                   </td>
                   <td className="px-4 py-3 font-medium text-foreground">{b.title}</td>
                   <td className="px-4 py-3 text-muted-foreground">{b.location}</td>
-                  <td className="px-4 py-3"><StatusBadge status={b.status} /></td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={b.status} />
+                  </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1.5">
-                      <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-primary" aria-label="Edit">
+                      <button
+                        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-secondary hover:text-primary"
+                        aria-label="Edit"
+                      >
                         <Pencil className="size-4" />
                       </button>
-                      <button className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-50 hover:text-destructive" aria-label="Delete">
+                      <button
+                        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-50 hover:text-destructive"
+                        aria-label="Delete"
+                      >
                         <Trash2 className="size-4" />
                       </button>
                     </div>

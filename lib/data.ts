@@ -1,5 +1,18 @@
+/** Types and helpers aligned with the Spring Boot API (com.pajedhow.backend.dto). */
+
+export type Supplier = {
+  id: number | string
+  name: string
+  location: string
+  country: string
+  rating: number
+  responseTime: string
+  verified: boolean
+}
+
 export type Product = {
   id: string
+  slug: string
   name: string
   category: string
   price: number
@@ -10,180 +23,29 @@ export type Product = {
   isNew?: boolean
   colors: string[]
   material: string
+  status?: string
+  stock?: number
+  inStock?: boolean
+  sku?: string
+  moq?: number
+  warrantyMonths?: number
+  deliveryDays?: number
+  supplier?: Supplier | null
 }
 
 export type Category = {
+  id?: string
   slug: string
   name: string
-  count: number
+  description?: string
   image: string
+  status?: string
+  /** Mapped from backend `productCount`. */
+  count: number
 }
-
-export const categories: Category[] = [
-  { slug: "sofas", name: "Sofas & Seating", count: 28, image: "/sofa-modern-fabric.png" },
-  { slug: "beds", name: "Beds", count: 18, image: "/bed-king.png" },
-  { slug: "dining-sets", name: "Dining Sets", count: 24, image: "/dining-set.png" },
-  { slug: "chairs", name: "Chairs & Stools", count: 36, image: "/chair.png" },
-  { slug: "tv-stands", name: "Sideboards", count: 20, image: "/tv-stand.png" },
-  { slug: "wardrobes", name: "Cabinets", count: 16, image: "/wardrobe.png" },
-  { slug: "office-furniture", name: "Desks", count: 22, image: "/office-furniture.png" },
-  { slug: "outdoor", name: "Outdoor", count: 12, image: "/outdoor.png" },
-]
-
-export const colorSwatches = [
-  { name: "Natural Teak", value: "#c8902f" },
-  { name: "Dark Mahogany", value: "#3b2f2a" },
-  { name: "Weathered Grey", value: "#9ca3af" },
-  { name: "Ocean Blue", value: "#1e3a5f" },
-  { name: "Forest Green", value: "#2f5233" },
-]
-
-export const materials = ["Reclaimed Wood", "Teak", "Mahogany", "Hardwood"]
-
-export const products: Product[] = [
-  {
-    id: "modern-fabric-sofa",
-    name: "Reclaimed Wood Cushion Sofa",
-    category: "sofas",
-    price: 750000,
-    oldPrice: 950000,
-    image: "/sofa-modern-fabric.png",
-    rating: 4.5,
-    reviews: 24,
-    colors: ["#9ca3af", "#c8902f", "#1e3a5f", "#3b2f2a"],
-    material: "Reclaimed Wood",
-  },
-  {
-    id: "luxury-chesterfield-sofa",
-    name: "Kanga Cushion Armchair",
-    category: "sofas",
-    price: 1450000,
-    image: "/sofa-chesterfield.png",
-    rating: 4.7,
-    reviews: 18,
-    colors: ["#2f5233", "#3b2f2a", "#1e3a5f"],
-    material: "Teak",
-  },
-  {
-    id: "minimalist-3-seater-sofa",
-    name: "Reclaimed Wood Bench Seat",
-    category: "sofas",
-    price: 680000,
-    image: "/sofa-minimalist.png",
-    rating: 4.3,
-    reviews: 12,
-    colors: ["#9ca3af", "#c8902f"],
-    material: "Reclaimed Wood",
-  },
-  {
-    id: "l-shaped-sectional-sofa",
-    name: "Dhow Lounge Seating Set",
-    category: "sofas",
-    price: 1350000,
-    image: "/sofa-lshaped.png",
-    rating: 4.6,
-    reviews: 20,
-    colors: ["#9ca3af", "#3b2f2a"],
-    material: "Reclaimed Wood",
-  },
-  {
-    id: "recliner-sofa-set",
-    name: "Carved Lounge Chair",
-    category: "sofas",
-    price: 1800000,
-    image: "/sofa-recliner.png",
-    rating: 4.4,
-    reviews: 16,
-    colors: ["#9ca3af", "#1e3a5f"],
-    material: "Mahogany",
-  },
-  {
-    id: "wooden-frame-sofa",
-    name: "Carved Wooden Stool",
-    category: "sofas",
-    price: 850000,
-    image: "/sofa-wooden-frame.png",
-    rating: 4.5,
-    reviews: 14,
-    colors: ["#c8902f", "#3b2f2a"],
-    material: "Hardwood",
-  },
-  {
-    id: "king-size-upholstered-bed",
-    name: "Reclaimed Wood King Bed",
-    category: "beds",
-    price: 1250000,
-    image: "/bed-king.png",
-    rating: 4.2,
-    reviews: 18,
-    isNew: true,
-    colors: ["#9ca3af", "#c8902f"],
-    material: "Reclaimed Wood",
-  },
-  {
-    id: "6-seater-dining-set",
-    name: "Reclaimed 6 Seater Dining Set",
-    category: "dining-sets",
-    price: 875000,
-    image: "/dining-set.png",
-    rating: 4.5,
-    reviews: 24,
-    isNew: true,
-    colors: ["#c8902f", "#3b2f2a"],
-    material: "Reclaimed Wood",
-  },
-  {
-    id: "wooden-coffee-table",
-    name: "Reclaimed Wood Coffee Table",
-    category: "tables",
-    price: 350000,
-    image: "/coffee-table.png",
-    rating: 4.5,
-    reviews: 15,
-    isNew: true,
-    colors: ["#c8902f", "#3b2f2a"],
-    material: "Reclaimed Wood",
-  },
-  {
-    id: "modern-l-shaped-sofa",
-    name: "Dhow Terrace Lounge Set",
-    category: "sofas",
-    price: 950000,
-    image: "/hero-living-room.png",
-    rating: 4.4,
-    reviews: 32,
-    isNew: true,
-    colors: ["#9ca3af", "#3b2f2a"],
-    material: "Reclaimed Wood",
-  },
-]
-
-export const featuredProducts = products.filter((p) =>
-  ["modern-l-shaped-sofa", "king-size-upholstered-bed", "6-seater-dining-set", "wooden-coffee-table"].includes(p.id),
-)
-
-// ---------------------------------------------------------------------------
-// Marketplace metadata (supplier, stock, MOQ, warranty, delivery, specs)
-// ---------------------------------------------------------------------------
-
-export type Supplier = {
-  id: string
-  name: string
-  location: string
-  country: string
-  rating: number
-  responseTime: string
-  verified: boolean
-}
-
-export const suppliers: Supplier[] = [
-  { id: "pajedhow-furnishings", name: "Pajedhow Furnishings Ltd", location: "Dar es Salaam", country: "Tanzania", rating: 4.8, responseTime: "≤ 2 hours", verified: true },
-  { id: "kilimanjaro-woodworks", name: "Kilimanjaro Woodworks", location: "Arusha", country: "Tanzania", rating: 4.6, responseTime: "≤ 4 hours", verified: true },
-  { id: "zanzibar-interiors", name: "Zanzibar Interiors Co.", location: "Zanzibar", country: "Tanzania", rating: 4.7, responseTime: "≤ 3 hours", verified: true },
-]
 
 export type ProductMeta = {
-  supplier: Supplier
+  supplier: Supplier | null
   stock: number
   inStock: boolean
   moq: number
@@ -193,54 +55,118 @@ export type ProductMeta = {
   specs: { label: string; value: string }[]
 }
 
-function hashId(id: string) {
-  let h = 0
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
-  return h
+export type SpringPage<T> = {
+  content: T[]
+  totalElements: number
+  totalPages: number
+  number: number
+  size: number
 }
 
-export function getProductMeta(product: Product): ProductMeta {
-  const h = hashId(product.id)
-  const supplier = suppliers[h % suppliers.length]
-  const stock = 4 + (h % 40)
-  const moq = 1 + (h % 3)
-  const warrantyMonths = [12, 18, 24, 36][h % 4]
-  const deliveryDays = 3 + (h % 6)
-  const dims = ["220 × 95 × 85 cm", "180 × 80 × 75 cm", "200 × 100 × 90 cm", "160 × 90 × 80 cm"][h % 4]
-  const weight = `${25 + (h % 40)} kg`
+function num(value: unknown, fallback = 0) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : fallback
+}
+
+function str(value: unknown, fallback = "") {
+  return value == null ? fallback : String(value)
+}
+
+/** Normalize a ProductResponse from the backend into the storefront Product shape. */
+export function normalizeProduct(raw: Record<string, unknown>): Product {
+  const supplierRaw = raw.supplier as Record<string, unknown> | null | undefined
   return {
-    supplier,
+    id: str(raw.id),
+    slug: str(raw.slug || raw.id),
+    name: str(raw.name),
+    category: str(raw.category),
+    price: num(raw.price),
+    oldPrice: raw.oldPrice != null ? num(raw.oldPrice) : undefined,
+    image: str(raw.image, "/placeholder.svg"),
+    rating: num(raw.rating),
+    reviews: num(raw.reviews),
+    isNew: Boolean(raw.isNew),
+    colors: Array.isArray(raw.colors) ? raw.colors.map(String) : [],
+    material: str(raw.material),
+    status: raw.status != null ? str(raw.status) : undefined,
+    stock: raw.stock != null ? num(raw.stock) : undefined,
+    inStock: raw.inStock != null ? Boolean(raw.inStock) : undefined,
+    sku: raw.sku != null ? str(raw.sku) : undefined,
+    moq: raw.moq != null ? num(raw.moq) : undefined,
+    warrantyMonths: raw.warrantyMonths != null ? num(raw.warrantyMonths) : undefined,
+    deliveryDays: raw.deliveryDays != null ? num(raw.deliveryDays) : undefined,
+    supplier: supplierRaw
+      ? {
+          id: supplierRaw.id as number | string,
+          name: str(supplierRaw.name),
+          location: str(supplierRaw.location),
+          country: str(supplierRaw.country),
+          rating: num(supplierRaw.rating),
+          responseTime: str(supplierRaw.responseTime),
+          verified: Boolean(supplierRaw.verified),
+        }
+      : null,
+  }
+}
+
+export function normalizeCategory(raw: Record<string, unknown>): Category {
+  return {
+    id: raw.id != null ? str(raw.id) : undefined,
+    slug: str(raw.slug),
+    name: str(raw.name),
+    description: raw.description != null ? str(raw.description) : undefined,
+    image: str(raw.image, "/placeholder.svg"),
+    status: raw.status != null ? str(raw.status) : undefined,
+    count: num(raw.productCount ?? raw.count),
+  }
+}
+
+/** Build product meta from fields already present on ProductResponse. */
+export function productMetaFromProduct(product: Product): ProductMeta {
+  const stock = product.stock ?? 0
+  return {
+    supplier: product.supplier ?? null,
     stock,
-    inStock: stock > 0,
-    moq,
-    warrantyMonths,
-    deliveryDays,
-    sku: `PJD-${product.id.slice(0, 4).toUpperCase()}-${(h % 900) + 100}`,
+    inStock: product.inStock ?? stock > 0,
+    moq: product.moq ?? 1,
+    warrantyMonths: product.warrantyMonths ?? 12,
+    deliveryDays: product.deliveryDays ?? 5,
+    sku: product.sku ?? `SKU-${product.id}`,
     specs: [
-      { label: "Material", value: product.material },
-      { label: "Dimensions", value: dims },
-      { label: "Weight", value: weight },
-      { label: "Frame", value: "Solid hardwood" },
-      { label: "Assembly", value: "Includes assembly on delivery" },
-      { label: "Origin", value: `${supplier.location}, ${supplier.country}` },
+      { label: "Material", value: product.material || "—" },
+      { label: "SKU", value: product.sku || "—" },
+      { label: "MOQ", value: String(product.moq ?? 1) },
+      {
+        label: "Warranty",
+        value: `${product.warrantyMonths ?? 12} months`,
+      },
+      {
+        label: "Delivery",
+        value: `${product.deliveryDays ?? 5} days`,
+      },
+      {
+        label: "Origin",
+        value: product.supplier
+          ? `${product.supplier.location}, ${product.supplier.country}`
+          : "Tanzania",
+      },
     ],
   }
 }
 
-export function getRelatedProducts(product: Product, limit = 4) {
-  return products
-    .filter((p) => p.id !== product.id && p.category === product.category)
-    .slice(0, limit)
-    .concat(products.filter((p) => p.id !== product.id && p.category !== product.category))
-    .slice(0, limit)
-}
-
-export function getProductById(id: string) {
-  return products.find((p) => p.id === id)
-}
-
-export function getProductsByCategory(slug: string) {
-  return products.filter((p) => p.category === slug)
+/** Title-case enum-style statuses: PUBLISHED → Published. */
+export function prettifyStatus(status: string) {
+  if (!status) return status
+  if (status.includes(" ") || status.includes("_")) {
+    return status
+      .replace(/_/g, " ")
+      .toLowerCase()
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+  }
+  if (status === status.toUpperCase()) {
+    return status.charAt(0) + status.slice(1).toLowerCase()
+  }
+  return status
 }
 
 export function formatPrice(amount: number) {

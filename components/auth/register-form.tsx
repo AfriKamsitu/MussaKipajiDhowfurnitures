@@ -23,32 +23,37 @@ export function RegisterForm() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const { error, role } = await signUp({
+    const { error: err } = await signUp({
       name: `${firstName} ${lastName}`.trim(),
       email,
       password,
     })
     setLoading(false)
-    if (error) {
-      setError(error)
+    if (err) {
+      setError(err)
       return
     }
-    router.push(role === "admin" ? "/admin" : "/account")
+    router.push("/account")
     router.refresh()
   }
 
   async function handleProvider(provider: "google" | "facebook") {
     setError(null)
     setLoading(true)
-    const { role } = await signInWithProvider(provider)
+    const { error: err, redirected } = await signInWithProvider(provider)
     setLoading(false)
-    router.push(role === "admin" ? "/admin" : "/account")
+    if (err) {
+      setError(err)
+      return
+    }
+    if (redirected) return
+    router.push("/account")
     router.refresh()
   }
 
   return (
     <form onSubmit={handleSubmit} className="grid gap-5">
-      <SocialAuth action="Sign up" onProvider={handleProvider} />
+      <SocialAuth action="Sign up" onProvider={handleProvider} disabled={loading} />
       {error && (
         <p className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
@@ -65,6 +70,7 @@ export function RegisterForm() {
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="John"
               className={`${authInputClass} pl-9`}
+              autoComplete="given-name"
             />
           </div>
         </div>
@@ -76,6 +82,7 @@ export function RegisterForm() {
             onChange={(e) => setLastName(e.target.value)}
             placeholder="Doe"
             className={authInputClass}
+            autoComplete="family-name"
           />
         </div>
       </div>
@@ -90,6 +97,7 @@ export function RegisterForm() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
             className={`${authInputClass} pl-9`}
+            autoComplete="email"
           />
         </div>
       </div>
@@ -99,12 +107,13 @@ export function RegisterForm() {
           <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             required
-            minLength={8}
+            minLength={6}
             type={show ? "text" : "password"}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 characters"
+            placeholder="At least 6 characters"
             className={`${authInputClass} px-9`}
+            autoComplete="new-password"
           />
           <button
             type="button"
@@ -142,6 +151,9 @@ export function RegisterForm() {
         <Link href="/login" className="font-medium text-accent hover:underline">
           Sign in
         </Link>
+      </p>
+      <p className="text-center text-xs text-muted-foreground">
+        New accounts are buyers. Google/Facebook also create a buyer profile.
       </p>
     </form>
   )

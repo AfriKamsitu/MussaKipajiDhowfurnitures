@@ -12,6 +12,7 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!loading && !user) router.replace("/login?redirect=/admin")
+    // Buyers trying to open /admin stay on a denied screen (handled below).
   }, [loading, user, router])
 
   if (loading || !user) {
@@ -32,8 +33,8 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
         <div>
           <h1 className="text-xl font-bold text-foreground">Admin access required</h1>
           <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-            Your account doesn&apos;t have permission to view the admin panel. Sign in with an admin
-            account to continue.
+            Buyer accounts cannot open the admin panel. Sign in with an ADMIN account, or continue
+            shopping from your buyer dashboard.
           </p>
         </div>
         <div className="flex gap-3">

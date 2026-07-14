@@ -26,17 +26,14 @@ Five system roles (mirroring the frontend):
 
 | Role          | Scope                                                                 |
 |---------------|-----------------------------------------------------------------------|
-| `SUPER_ADMIN` | Full access, incl. staff management and order deletion                |
-| `MANAGER`     | Products, categories, suppliers, orders, coupons, banners, reviews    |
-| `EDITOR`      | Content: products, categories, suppliers, banners                     |
-| `SUPPORT`     | Orders (create/update status), review moderation                      |
-| `CUSTOMER`    | Own profile, addresses, orders, and review submissions                |
+| `ADMIN`       | Full admin access, including staff management and order deletion      |
+| `BUYER`       | Own profile, addresses, orders, and review submissions                |
 
 Access is enforced two ways:
 - **URL rules** in `SecurityConfig` (`/api/admin/**` requires a staff role, `/api/account/**` requires login).
 - **Method-level `@PreAuthorize`** on sensitive admin operations for fine-grained control.
 
-> On registration, emails starting with `admin@` are provisioned as `SUPER_ADMIN` (matching the frontend demo rule); everyone else becomes a `CUSTOMER`. Staff accounts are otherwise created by a Super Admin via `/api/admin/staff`.
+> On registration, emails starting with `admin@` are provisioned as `ADMIN`; everyone else becomes a `BUYER`. Staff accounts are otherwise created by an admin via `/api/admin/staff`.
 
 ---
 
@@ -55,14 +52,13 @@ Copy `.env.example` and adjust, or set the variables in your shell / IDE run con
 cd backend
 mvn spring-boot:run
 ```
-The API starts on `http://localhost:8080`. On first run, `DataSeeder` populates categories, suppliers, sample products, coupons, banners, and two demo accounts:
+The API starts on `http://localhost:8080`. On startup, `DataSeeder` ensures the ADMIN account exists and fills catalog data if empty:
 
-| Role     | Email                | Password    |
-|----------|----------------------|-------------|
-| Admin    | `admin@pajedhow.com` | `admin1234` |
-| Customer | `buyer@pajedhow.com` | `buyer1234` |
+| Role  | Email                           | Password         |
+|-------|---------------------------------|------------------|
+| Admin | `Pajedhowfurniture@gmail.com`   | `Mussa@paje2026` |
 
-Disable seeding in production with `APP_SEED_ENABLED=false`.
+Buyers register themselves via `/api/auth/register` or social login. Disable seeding with `APP_SEED_ENABLED=false`.
 
 ### 4. Build a jar
 ```bash
@@ -87,6 +83,7 @@ java -jar target/pajedhow-backend-1.0.0.jar
 |--------|-----------------------------------|---------------------------------|
 | POST   | `/api/auth/register`              | Create a customer account       |
 | POST   | `/api/auth/login`                 | Login                           |
+| POST   | `/api/auth/social`                | Buyer-only social login via Google/Facebook |
 | POST   | `/api/auth/refresh`               | Exchange refresh token          |
 | GET    | `/api/health`                     | Health check                    |
 | GET    | `/api/config/whatsapp`            | WhatsApp contact number         |
@@ -116,20 +113,20 @@ java -jar target/pajedhow-backend-1.0.0.jar
 |--------|----------------------------------------|------------------------------------|
 | GET    | `/api/admin/dashboard`                 | any staff                          |
 | GET    | `/api/admin/activity`                  | any staff                          |
-| CRUD   | `/api/admin/products`                  | create/update: SUPER_ADMIN/MANAGER/EDITOR; delete: SUPER_ADMIN/MANAGER |
+| CRUD   | `/api/admin/products`                  | ADMIN only |
 | CRUD   | `/api/admin/categories`                | same as products                   |
 | CRUD   | `/api/admin/suppliers`                 | same as products                   |
-| GET/POST | `/api/admin/orders`                  | list: any staff; create: SUPER_ADMIN/MANAGER/SUPPORT |
-| PATCH  | `/api/admin/orders/{id}/status`        | SUPER_ADMIN/MANAGER/SUPPORT        |
-| DELETE | `/api/admin/orders/{id}`               | SUPER_ADMIN                        |
-| GET    | `/api/admin/customers`                 | any staff                          |
-| PATCH  | `/api/admin/customers/{id}/status`     | SUPER_ADMIN/MANAGER                |
-| CRUD   | `/api/admin/staff`                     | SUPER_ADMIN                        |
-| CRUD   | `/api/admin/coupons`                   | SUPER_ADMIN/MANAGER                |
-| CRUD   | `/api/admin/banners`                   | SUPER_ADMIN/MANAGER/EDITOR         |
+| GET/POST | `/api/admin/orders`                  | ADMIN only |
+| PATCH  | `/api/admin/orders/{id}/status`        | ADMIN only        |
+| DELETE | `/api/admin/orders/{id}`               | ADMIN only                        |
+| GET    | `/api/admin/customers`                 | ADMIN only                          |
+| PATCH  | `/api/admin/customers/{id}/status`     | ADMIN only                |
+| CRUD   | `/api/admin/staff`                     | ADMIN only                        |
+| CRUD   | `/api/admin/coupons`                   | ADMIN only                |
+| CRUD   | `/api/admin/banners`                   | ADMIN only         |
 | GET    | `/api/admin/reviews`, `/reviews/pending` | any staff                        |
-| PATCH  | `/api/admin/reviews/{id}/status`       | SUPER_ADMIN/MANAGER/SUPPORT/EDITOR |
-| DELETE | `/api/admin/reviews/{id}`              | SUPER_ADMIN/MANAGER                |
+| PATCH  | `/api/admin/reviews/{id}/status`       | ADMIN only |
+| DELETE | `/api/admin/reviews/{id}`              | ADMIN only                |
 
 ---
 

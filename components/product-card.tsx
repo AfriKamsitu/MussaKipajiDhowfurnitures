@@ -17,7 +17,7 @@ export function ProductCard({ product }: { product: Product }) {
     <div className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-elevated">
       {/* Image */}
       <div className="relative aspect-square overflow-hidden rounded-t-xl bg-secondary">
-        <Link href={`/product/${product.id}`} className="absolute inset-0 block">
+        <Link href={`/product/${product.slug || product.id}`} className="absolute inset-0 block">
           <Image
             src={product.image || "/placeholder.svg"}
             alt={product.name}
@@ -33,7 +33,7 @@ export function ProductCard({ product }: { product: Product }) {
         )}
         {/* Alibaba-style quick-view magnifier (bottom-left) */}
         <Link
-          href={`/product/${product.id}`}
+          href={`/product/${product.slug || product.id}`}
           aria-label={`Quick view ${product.name}`}
           className="absolute bottom-3 left-3 flex size-9 items-center justify-center rounded-full bg-card/90 text-foreground shadow-soft backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:text-accent"
         >
@@ -55,7 +55,7 @@ export function ProductCard({ product }: { product: Product }) {
       {/* Body */}
       <div className="flex flex-1 flex-col gap-1.5 p-3 sm:p-4">
         <Link
-          href={`/product/${product.id}`}
+          href={`/product/${product.slug || product.id}`}
           className="line-clamp-2 text-sm leading-snug text-foreground transition-colors hover:text-accent"
         >
           {product.name}
@@ -78,7 +78,7 @@ export function ProductCard({ product }: { product: Product }) {
 
         <div className="mt-auto flex items-center gap-2 pt-1">
           <Link
-            href={`/product/${product.id}`}
+            href={`/product/${product.slug || product.id}`}
             className="flex flex-1 items-center justify-center rounded-lg bg-primary py-2 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
           >
             View Details

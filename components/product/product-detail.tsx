@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import {
@@ -18,7 +18,8 @@ import {
   ShoppingBag,
   Truck,
 } from "lucide-react"
-import { type Product, formatPrice, getProductMeta, getRelatedProducts } from "@/lib/data"
+import { type Product, formatPrice, normalizeProduct, productMetaFromProduct } from "@/lib/data"
+import { fetchApi } from "@/lib/api"
 import { StarRating } from "@/components/star-rating"
 import { ProductCard } from "@/components/product-card"
 import { useStore } from "@/components/store-provider"
@@ -31,10 +32,27 @@ type Tab = "description" | "specifications" | "delivery" | "reviews"
 export function ProductDetail({ product }: { product: Product }) {
   const router = useRouter()
   const { toggleWishlist, isInWishlist } = useStore()
-  const meta = getProductMeta(product)
-  const related = getRelatedProducts(product)
+  const meta = productMetaFromProduct(product)
+  const supplier = meta.supplier
+  const [related, setRelated] = useState<Product[]>([])
 
-  const gallery = [product.image, "/hero-living-room.png", "/sofa-minimalist.png", "/sofa-lshaped.png", "/sofa-recliner.png"]
+  useEffect(() => {
+    fetchApi<{ content?: Record<string, unknown>[] }>(
+      `/api/products?category=${encodeURIComponent(product.category)}&size=8`,
+    )
+      .then((payload) => {
+        const list = Array.isArray(payload?.content) ? payload.content : []
+        setRelated(
+          list
+            .map(normalizeProduct)
+            .filter((p) => p.id !== product.id)
+            .slice(0, 4),
+        )
+      })
+      .catch(() => setRelated([]))
+  }, [product.category, product.id])
+
+  const gallery = [product.image].filter(Boolean)
   const [active, setActive] = useState(0)
   const [color, setColor] = useState(product.colors[0])
   const [qty, setQty] = useState(meta.moq)
@@ -150,26 +168,28 @@ export function ProductDetail({ product }: { product: Product }) {
           </div>
 
           {/* Supplier card */}
-          <div className="mt-5 flex items-center gap-3 rounded-lg border border-border bg-card p-3">
-            <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-              {meta.supplier.name.slice(0, 2).toUpperCase()}
-            </span>
-            <div className="min-w-0 flex-1 leading-tight">
-              <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
-                <span className="truncate">{meta.supplier.name}</span>
-                {meta.supplier.verified && <BadgeCheck className="size-4 shrink-0 text-primary" />}
-              </p>
-              <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                <MapPin className="size-3" /> {meta.supplier.location}, {meta.supplier.country}
-              </p>
-            </div>
-            <div className="text-right leading-tight">
-              <div className="flex items-center justify-end gap-1 text-sm font-semibold text-foreground">
-                <StarRating rating={meta.supplier.rating} size="sm" /> {meta.supplier.rating}
+          {supplier && (
+            <div className="mt-5 flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+              <span className="flex size-11 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                {supplier.name.slice(0, 2).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1 leading-tight">
+                <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  <span className="truncate">{supplier.name}</span>
+                  {supplier.verified && <BadgeCheck className="size-4 shrink-0 text-primary" />}
+                </p>
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <MapPin className="size-3" /> {supplier.location}, {supplier.country}
+                </p>
               </div>
-              <p className="text-[11px] text-muted-foreground">Replies {meta.supplier.responseTime}</p>
+              <div className="text-right leading-tight">
+                <div className="flex items-center justify-end gap-1 text-sm font-semibold text-foreground">
+                  <StarRating rating={supplier.rating} size="sm" /> {supplier.rating}
+                </div>
+                <p className="text-[11px] text-muted-foreground">Replies {supplier.responseTime}</p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Color */}
           <div className="mt-5 flex items-center gap-4">
@@ -285,13 +305,14 @@ export function ProductDetail({ product }: { product: Product }) {
             <div className="max-w-3xl space-y-3">
               <p>
                 The {product.name} blends premium {product.material.toLowerCase()} construction with a timeless silhouette
-                that suits modern and classic interiors alike. Each piece is crafted by {meta.supplier.name} using
+                that suits modern and classic interiors alike. Each piece is crafted by{" "}
+                {supplier?.name ?? "our artisans"} using
                 durable, responsibly sourced materials for years of comfortable use.
               </p>
               <ul className="list-inside list-disc space-y-1">
                 <li>Premium {product.material.toLowerCase()} finish with reinforced joints</li>
                 <li>Solid hardwood frame for long-lasting durability</li>
-                <li>Available in multiple colours ��� confirm options with the seller</li>
+                <li>Available in multiple colours — confirm options with the seller</li>
                 <li>Professional delivery and assembly included</li>
               </ul>
             </div>
@@ -314,7 +335,8 @@ export function ProductDetail({ product }: { product: Product }) {
           {tab === "delivery" && (
             <div className="grid max-w-3xl gap-4 sm:grid-cols-2">
               <InfoBlock icon={Truck} title="Delivery">
-                Estimated delivery in {meta.deliveryDays} business days to {meta.supplier.country}. Delivery fees are
+                Estimated delivery in {meta.deliveryDays} business days
+                {supplier?.country ? ` to ${supplier.country}` : ""}. Delivery fees are
                 confirmed by the seller based on your location. Cash on delivery, bank transfer and mobile money are
                 accepted offline.
               </InfoBlock>
@@ -323,7 +345,8 @@ export function ProductDetail({ product }: { product: Product }) {
                 WhatsApp to arrange any warranty service.
               </InfoBlock>
               <InfoBlock icon={Clock} title="Lead time">
-                Made-to-order customisations may extend the lead time. Discuss timelines directly with {meta.supplier.name}.
+                Made-to-order customisations may extend the lead time. Discuss timelines directly with{" "}
+                {supplier?.name ?? "the seller"}.
               </InfoBlock>
               <InfoBlock icon={Package} title="Assembly">
                 Professional assembly is included on delivery for this item at no additional charge.
@@ -340,22 +363,13 @@ export function ProductDetail({ product }: { product: Product }) {
                   <p className="mt-1 text-xs text-muted-foreground">{product.reviews} reviews</p>
                 </div>
                 <p className="flex-1 text-sm">
-                  Buyers consistently praise the build quality, comfort and the responsive support from{" "}
-                  {meta.supplier.name}. Have a question? Message us on WhatsApp to hear from recent buyers.
+                  Ratings come from verified buyers. Message us on WhatsApp if you have questions before ordering
+                  {supplier?.name ? ` from ${supplier.name}` : ""}.
                 </p>
               </div>
-              {[
-                { name: "Amani K.", text: "Excellent quality and the seller answered all my questions on WhatsApp before I ordered." },
-                { name: "Neema J.", text: "Delivery was on time and assembly was included. Very happy with the finish." },
-              ].map((r) => (
-                <div key={r.name} className="rounded-lg border border-border bg-card p-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-semibold text-foreground">{r.name}</span>
-                    <StarRating rating={5} size="sm" />
-                  </div>
-                  <p className="mt-1.5 text-sm">{r.text}</p>
-                </div>
-              ))}
+              <p className="text-sm text-muted-foreground">
+                Customer review details load from the product reviews API once buyers submit ratings.
+              </p>
             </div>
           )}
         </div>

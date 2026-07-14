@@ -16,16 +16,31 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import { salesOverview, orderStatusBreakdown, salesByCategory } from "@/lib/admin-data"
 
 const salesConfig = {
   value: { label: "Sales", color: "var(--chart-1)" },
 } satisfies ChartConfig
 
-export function SalesOverviewChart() {
+const CHART_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+]
+
+export function SalesOverviewChart({
+  data = [],
+}: {
+  data?: Array<{ day: string; value: number }>
+}) {
+  if (!data.length) {
+    return <p className="py-16 text-center text-sm text-muted-foreground">No sales data yet</p>
+  }
+
   return (
     <ChartContainer config={salesConfig} className="h-[260px] w-full">
-      <AreaChart data={salesOverview} margin={{ left: 4, right: 8, top: 8 }}>
+      <AreaChart data={data} margin={{ left: 4, right: 8, top: 8 }}>
         <defs>
           <linearGradient id="fillSales" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="var(--color-value)" stopOpacity={0.3} />
@@ -33,13 +48,7 @@ export function SalesOverviewChart() {
           </linearGradient>
         </defs>
         <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
-        <XAxis
-          dataKey="day"
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-          fontSize={12}
-        />
+        <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} fontSize={12} />
         <YAxis
           tickLine={false}
           axisLine={false}
@@ -49,9 +58,7 @@ export function SalesOverviewChart() {
         />
         <ChartTooltip
           content={
-            <ChartTooltipContent
-              formatter={(value) => `TZS ${Number(value).toLocaleString()}`}
-            />
+            <ChartTooltipContent formatter={(value) => `TZS ${Number(value).toLocaleString()}`} />
           }
         />
         <Area
@@ -76,6 +83,10 @@ function DonutChart({
   centerLabel: string
   centerValue: string
 }) {
+  if (!data.length) {
+    return <p className="py-10 text-center text-sm text-muted-foreground">No data yet</p>
+  }
+
   const config = Object.fromEntries(
     data.map((d) => [d.name, { label: d.name, color: d.color }]),
   ) satisfies ChartConfig
@@ -120,22 +131,38 @@ function DonutChart({
   )
 }
 
-export function OrderStatusChart() {
+export function OrderStatusChart({
+  data = [],
+}: {
+  data?: Array<{ name: string; value: number; color?: string }>
+}) {
+  const chartData = data.map((d, i) => ({
+    name: d.name,
+    value: d.value,
+    color: d.color || CHART_COLORS[i % CHART_COLORS.length],
+  }))
+  const total = chartData.reduce((sum, d) => sum + d.value, 0)
   return (
-    <DonutChart
-      data={orderStatusBreakdown.map((d) => ({ name: d.name, value: d.value, color: d.color }))}
-      centerLabel="Total Orders"
-      centerValue="348"
-    />
+    <DonutChart data={chartData} centerLabel="Total Orders" centerValue={String(total)} />
   )
 }
 
-export function SalesByCategoryChart() {
+export function SalesByCategoryChart({
+  data = [],
+}: {
+  data?: Array<{ name: string; value: number; color?: string }>
+}) {
+  const chartData = data.map((d, i) => ({
+    name: d.name,
+    value: d.value,
+    color: d.color || CHART_COLORS[i % CHART_COLORS.length],
+  }))
+  const total = chartData.reduce((sum, d) => sum + d.value, 0)
   return (
     <DonutChart
-      data={salesByCategory}
-      centerLabel="Total Sales"
-      centerValue="28.4M"
+      data={chartData}
+      centerLabel="Total"
+      centerValue={total >= 1_000_000 ? `${(total / 1_000_000).toFixed(1)}M` : String(total)}
     />
   )
 }

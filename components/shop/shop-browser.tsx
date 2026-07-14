@@ -1,19 +1,24 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { ChevronDown, LayoutGrid, List, SlidersHorizontal } from "lucide-react"
-import {
-  categories,
-  colorSwatches,
-  materials,
-  products,
-  formatPrice,
-} from "@/lib/data"
 import { ProductCard } from "@/components/product-card"
+import { fetchApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { normalizeCategory, normalizeProduct, formatPrice, type Category, type Product, type SpringPage } from "@/lib/data"
 
 const sortOptions = ["Latest", "Price: Low to High", "Price: High to Low", "Top Rated"]
+
+const colorSwatches = [
+  { name: "Natural Teak", value: "#c8902f" },
+  { name: "Dark Mahogany", value: "#3b2f2a" },
+  { name: "Weathered Grey", value: "#9ca3af" },
+  { name: "Ocean Blue", value: "#1e3a5f" },
+  { name: "Forest Green", value: "#2f5233" },
+]
+
+const materials = ["Reclaimed Wood", "Teak", "Mahogany", "Hardwood"]
 
 export function ShopBrowser() {
   const params = useSearchParams()
@@ -21,9 +26,9 @@ export function ShopBrowser() {
   const paramSort = params.get("sort")
   const paramCategory = params.get("category")
 
-  const [activeCategory, setActiveCategory] = useState(
-    paramCategory && categories.some((c) => c.slug === paramCategory) ? paramCategory : "sofas",
-  )
+  const [categories, setCategories] = useState<Category[]>([])
+  const [products, setProducts] = useState<Product[]>([])
+  const [activeCategory, setActiveCategory] = useState("sofas")
   const [maxPrice, setMaxPrice] = useState(2000000)
   const [activeColor, setActiveColor] = useState<string | null>(null)
   const [activeMaterials, setActiveMaterials] = useState<string[]>([])
@@ -34,6 +39,32 @@ export function ShopBrowser() {
   const [view, setView] = useState<"grid" | "list">("grid")
   const [page, setPage] = useState(1)
   const [filtersOpen, setFiltersOpen] = useState(false)
+
+  useEffect(() => {
+    fetchApi<Record<string, unknown>[]>("/api/categories")
+      .then((payload) => {
+        const list = Array.isArray(payload) ? payload : []
+        setCategories(list.map(normalizeCategory))
+      })
+      .catch(() => setCategories([]))
+  }, [])
+
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (paramCategory) params.set("category", paramCategory)
+    if (query) params.set("q", query)
+    params.set("size", "48")
+    const qs = params.toString()
+    fetchApi<SpringPage<Record<string, unknown>>>(`/api/products${qs ? `?${qs}` : ""}`)
+      .then((payload) => {
+        const content = Array.isArray(payload?.content) ? payload.content : []
+        setProducts(content.map(normalizeProduct))
+        if (paramCategory && categories.some((c) => c.slug === paramCategory)) {
+          setActiveCategory(paramCategory)
+        }
+      })
+      .catch(() => setProducts([]))
+  }, [paramCategory, categories, query])
 
   const searching = query.length > 0
   const activeCategoryName = searching
@@ -62,7 +93,7 @@ export function ShopBrowser() {
     else if (sort === "Price: High to Low") sorted.sort((a, b) => b.price - a.price)
     else if (sort === "Top Rated") sorted.sort((a, b) => b.rating - a.rating)
     return sorted
-  }, [activeCategory, maxPrice, activeColor, activeMaterials, sort, query, searching])
+  }, [activeCategory, maxPrice, activeColor, activeMaterials, sort, query, searching, products])
 
   return (
     <div className="grid gap-6 lg:grid-cols-[260px_1fr] lg:gap-8">

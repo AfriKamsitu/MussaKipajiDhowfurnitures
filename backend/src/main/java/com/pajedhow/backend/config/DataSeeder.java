@@ -15,14 +15,18 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * Seeds baseline reference data (demo accounts, categories, suppliers, products,
- * coupons, banners) on first run. Controlled by app.seed.enabled and skipped when
- * the database already has users.
+ * Seeds baseline catalog data and ensures the store ADMIN account exists.
+ * Buyers register themselves via the public signup / social login flows.
+ * Controlled by app.seed.enabled.
  */
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class DataSeeder implements CommandLineRunner {
+
+    /** Canonical admin credentials for this store. */
+    public static final String ADMIN_EMAIL = "pajedhowfurniture@gmail.com";
+    public static final String ADMIN_PASSWORD = "Mussa@paje2026";
 
     private final AppProperties appProperties;
     private final UserRepository userRepository;
@@ -40,12 +44,15 @@ public class DataSeeder implements CommandLineRunner {
             log.info("Data seeding disabled (app.seed.enabled=false)");
             return;
         }
-        if (userRepository.count() > 0) {
-            log.info("Data already present, skipping seed");
+
+        ensureAdminUser();
+
+        if (categoryRepository.count() > 0) {
+            log.info("Catalog data already present, skipping catalog seed");
             return;
         }
-        log.info("Seeding baseline data...");
-        seedUsers();
+
+        log.info("Seeding baseline catalog data...");
         seedCategories();
         Supplier supplier = seedSuppliers();
         seedProducts(supplier);
@@ -54,22 +61,38 @@ public class DataSeeder implements CommandLineRunner {
         log.info("Seeding complete");
     }
 
-    private void seedUsers() {
-        userRepository.save(User.builder()
-                .name("Store Admin")
-                .email("admin@pajedhow.com")
-                .password(passwordEncoder.encode("admin1234"))
-                .role(Role.SUPER_ADMIN)
-                .status(AccountStatus.ACTIVE)
-                .build());
-        userRepository.save(User.builder()
-                .name("Amina Buyer")
-                .email("buyer@pajedhow.com")
-                .password(passwordEncoder.encode("buyer1234"))
-                .role(Role.CUSTOMER)
-                .status(AccountStatus.ACTIVE)
-                .phone("+255700111222")
-                .build());
+    /** Create or update the single ADMIN account with the required credentials. */
+    private void ensureAdminUser() {
+        userRepository.findByEmailIgnoreCase(ADMIN_EMAIL).ifPresentOrElse(admin -> {
+            boolean changed = false;
+            if (admin.getRole() != Role.ADMIN) {
+                admin.setRole(Role.ADMIN);
+                changed = true;
+            }
+            if (admin.getStatus() != AccountStatus.ACTIVE) {
+                admin.setStatus(AccountStatus.ACTIVE);
+                changed = true;
+            }
+            if (!passwordEncoder.matches(ADMIN_PASSWORD, admin.getPassword())) {
+                admin.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
+                changed = true;
+            }
+            if (changed) {
+                userRepository.save(admin);
+                log.info("Updated ADMIN credentials for {}", ADMIN_EMAIL);
+            } else {
+                log.info("ADMIN account already up to date: {}", ADMIN_EMAIL);
+            }
+        }, () -> {
+            userRepository.save(User.builder()
+                    .name("Paje Dhow Admin")
+                    .email(ADMIN_EMAIL)
+                    .password(passwordEncoder.encode(ADMIN_PASSWORD))
+                    .role(Role.ADMIN)
+                    .status(AccountStatus.ACTIVE)
+                    .build());
+            log.info("Created ADMIN account: {}", ADMIN_EMAIL);
+        });
     }
 
     private void seedCategories() {

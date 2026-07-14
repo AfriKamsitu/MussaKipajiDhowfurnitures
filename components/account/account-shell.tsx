@@ -65,6 +65,15 @@ export function AccountShell({
             Store
           </Link>
 
+          {user.role === "admin" && (
+            <Link
+              href="/admin"
+              className="hidden items-center gap-2 rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:inline-flex"
+            >
+              Admin panel
+            </Link>
+          )}
+
           <div className="ml-auto flex items-center gap-3">
             <button
               onClick={() =>
