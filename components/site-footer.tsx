@@ -1,104 +1,43 @@
-import Link from "next/link"
-import Image from "next/image"
-import { Globe, Mail, MessageCircle, Send } from "lucide-react"
+"use client"
 
-const columns = [
-  {
-    title: "Shop",
-    links: [
-      { label: "Sofas", href: "/shop?category=sofas" },
-      { label: "Beds", href: "/shop?category=beds" },
-      { label: "Dining Sets", href: "/shop?category=dining-sets" },
-      { label: "Chairs", href: "/shop?category=chairs" },
-      { label: "Wardrobes", href: "/shop?category=wardrobes" },
-    ],
-  },
-  {
-    title: "Company",
-    links: [
-      { label: "About Us", href: "/about" },
-      { label: "Offers", href: "/offers" },
-      { label: "Wishlist", href: "/wishlist" },
-      { label: "Cart", href: "/cart" },
-      { label: "Contact Us", href: "/contact" },
-    ],
-  },
-  {
-    title: "Account",
-    links: [
-      { label: "Sign In", href: "/login" },
-      { label: "Register", href: "/register" },
-      { label: "Reset Password", href: "/reset-password" },
-      { label: "Checkout", href: "/checkout" },
-      { label: "Shop All", href: "/shop" },
-    ],
-  },
-]
+import { useStoreSettings } from "@/components/store-settings-provider"
 
 export function SiteFooter() {
+  const storeSettings = useStoreSettings()
+  const socialLinks = [
+    { label: "Instagram", href: storeSettings.instagramUrl, icon: "◎" },
+    { label: "Facebook", href: storeSettings.facebookUrl, icon: "f" },
+  ]
+
   return (
-    <footer className="mt-16 bg-primary text-primary-foreground">
-      <div className="mx-auto max-w-7xl px-4 py-12 lg:px-8">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
-          <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2.5">
-              <span className="flex size-11 items-center justify-center rounded-md bg-primary-foreground">
-                <Image
-                  src="/paje-dhow-logo.png"
-                  alt="Paje Dhow Furniture logo"
-                  width={44}
-                  height={44}
-                  className="size-9 object-contain"
-                />
+    <footer className="mt-8 border-t border-[#d9dedf] bg-[#eef1f2] text-[#2f3940]">
+      <div className="mx-auto flex min-h-36 max-w-7xl flex-col items-center justify-center gap-6 px-4 py-10 text-center">
+        <p className="text-sm sm:text-base">
+          Copyright &copy; {new Date().getFullYear()} {storeSettings.storeName}. All Rights Reserved.
+        </p>
+        <div className="flex items-center gap-5">
+          {socialLinks.map((item) =>
+            item.href ? (
+              <a
+                key={item.label}
+                href={item.href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={item.label}
+                className="text-[#30383d] transition-[color,transform] hover:-translate-y-0.5 hover:text-primary"
+              >
+                <span className="text-xl font-black leading-none" aria-hidden="true">{item.icon}</span>
+              </a>
+            ) : (
+              <span
+                key={item.label}
+                aria-label={`${item.label} link not configured`}
+                className="text-[#30383d]/35"
+              >
+                <span className="text-xl font-black leading-none" aria-hidden="true">{item.icon}</span>
               </span>
-              <span className="leading-tight">
-                <span className="block text-base font-bold uppercase tracking-wide">Paje Dhow</span>
-                <span className="block text-[11px] uppercase tracking-[0.2em] text-primary-foreground/70">Furniture</span>
-              </span>
-            </Link>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-primary-foreground/70">
-              Discover a wide range of stylish and quality furniture for every room. Crafted for comfort, designed to
-              last.
-            </p>
-            <div className="mt-5 flex gap-3">
-              {[Globe, MessageCircle, Mail, Send].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="flex size-9 items-center justify-center rounded-full bg-primary-foreground/10 transition-colors hover:bg-accent hover:text-accent-foreground"
-                  aria-label="Social link"
-                >
-                  <Icon className="size-4" />
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {columns.map((col) => (
-            <div key={col.title}>
-              <h3 className="text-sm font-semibold">{col.title}</h3>
-              <ul className="mt-4 space-y-2.5">
-                {col.links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-primary-foreground/70 transition-colors hover:text-accent"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-primary-foreground/15 pt-6 text-sm text-primary-foreground/60 sm:flex-row">
-          <p>© 2026 pajedhowfurnitures. All rights reserved.</p>
-          <div className="flex gap-5">
-            <a href="#" className="hover:text-accent">Privacy Policy</a>
-            <a href="#" className="hover:text-accent">Terms of Service</a>
-          </div>
+            ),
+          )}
         </div>
       </div>
     </footer>

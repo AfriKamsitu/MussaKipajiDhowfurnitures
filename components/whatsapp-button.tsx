@@ -1,25 +1,19 @@
 "use client"
 
-import { usePathname } from "next/navigation"
-import { openWhatsApp } from "@/lib/whatsapp"
 import { WhatsAppGlyph } from "@/components/whatsapp-glyph"
+import { whatsappUrl } from "@/lib/whatsapp"
 
-// Floating icon-only WhatsApp launcher. Shown on all storefront pages,
-// hidden inside the admin dashboard. Tapping it opens WhatsApp directly.
-export function WhatsAppButton() {
-  const pathname = usePathname()
-
-  if (pathname.startsWith("/admin")) return null
-
+export function WhatsAppContactIcon() {
   return (
-    <button
-      onClick={() =>
-        openWhatsApp("Hello Paje Dhow Furniture, I'd like to know more about your handcrafted furniture.")
-      }
-      aria-label="Chat on WhatsApp"
-      className="fixed bottom-5 right-5 z-50 flex size-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-elevated transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#25D366] focus-visible:ring-offset-2"
+    <a
+      href={whatsappUrl("Hello Paje Dhow Furniture, I would like help choosing furniture.")}
+      target="_blank"
+      rel="noreferrer"
+      aria-label="Chat with Paje Dhow Furniture on WhatsApp"
+      title="Chat on WhatsApp"
+      className="fixed bottom-24 right-4 z-40 flex size-14 items-center justify-center rounded-full bg-[#25D366] text-white shadow-elevated transition-[background-color,transform,box-shadow] duration-300 hover:-translate-y-1 hover:scale-105 hover:bg-[#20bd5a] hover:shadow-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#25D366] sm:bottom-24 sm:right-6 md:bottom-6"
     >
       <WhatsAppGlyph className="size-7" />
-    </button>
+    </a>
   )
 }

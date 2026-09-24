@@ -2,6 +2,7 @@ package com.pajedhow.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pajedhow.backend.config.AppProperties;
 import com.pajedhow.backend.dto.AuthDtos.*;
 import com.pajedhow.backend.entity.Role;
 import com.pajedhow.backend.entity.User;
@@ -11,45 +12,54 @@ import com.pajedhow.backend.mapper.Mappers;
 import com.pajedhow.backend.repository.UserRepository;
 import com.pajedhow.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
+import java.time.Duration;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
+    private static final HttpClient HTTP_CLIENT = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .followRedirects(HttpClient.Redirect.NEVER)
+            .build();
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
-    private static final String GOOGLE_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo?id_token=%s";
-    private static final String FACEBOOK_ME_URL = "https://graph.facebook.com/me?fields=id,name,email,picture&access_token=%s";
+    private static final String GOOGLE_ID_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo?id_token=%s";
+    private static final String GOOGLE_ACCESS_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo?access_token=%s";
+    private static final String FACEBOOK_ME_URL = "https://graph.facebook.com/me?fields=id,name,email,picture";
+    private static final String FACEBOOK_DEBUG_URL = "https://graph.facebook.com/debug_token?input_token=%s&access_token=%s";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final AuthenticationManager authenticationManager;
+    private final AppProperties appProperties;
 
     @Transactional
     public AuthResponse register(RegisterRequest req) {
-        if (userRepository.existsByEmailIgnoreCase(req.email())) {
+        String email = normalizeEmail(req.email());
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw new BadRequestException("An account with this email already exists.");
         }
         User user = User.builder()
-                .name(req.name())
-                .email(req.email().trim().toLowerCase())
+                .name(req.name().trim())
+                .email(email)
                 .password(passwordEncoder.encode(req.password()))
                 .role(Role.BUYER)
                 .status(AccountStatus.ACTIVE)
+                .marketingOptIn(Boolean.TRUE.equals(req.marketingOptIn()))
+                .marketingOptInAt(Boolean.TRUE.equals(req.marketingOptIn()) ? Instant.now() : null)
                 .build();
         user = userRepository.save(user);
         return buildAuthResponse(user);
@@ -57,10 +67,19 @@ public class AuthService {
 
     @Transactional
     public AuthResponse login(LoginRequest req) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(req.email().trim().toLowerCase(), req.password()));
-        User user = userRepository.findByEmailIgnoreCase(req.email())
+        String email = normalizeEmail(req.email());
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new BadRequestException("Invalid email or password."));
+        if (user.getStatus() != AccountStatus.ACTIVE) {
+            throw new BadRequestException("Invalid email or password.");
+        }
+        if (!passwordEncoder.matches(req.password(), user.getPassword())) {
+            throw new BadRequestException("Invalid email or password.");
+        }
+        if (passwordEncoder.upgradeEncoding(user.getPassword())) {
+            user.setPassword(passwordEncoder.encode(req.password()));
+        }
+        updateMarketingPreference(user, req.marketingOptIn());
         user.setLastActiveAt(Instant.now());
         userRepository.save(user);
         return buildAuthResponse(user);
@@ -68,12 +87,19 @@ public class AuthService {
 
     @Transactional
     public AuthResponse refresh(String refreshToken) {
-        String userId = jwtService.extractUserId(refreshToken);
-        if (userId == null || !jwtService.isTokenValid(refreshToken, userId)) {
+        final JwtService.TokenIdentity identity;
+        try {
+            identity = jwtService.extractRefreshTokenIdentity(refreshToken);
+        } catch (RuntimeException ex) {
             throw new BadRequestException("Invalid or expired refresh token.");
         }
-        User user = userRepository.findById(userId)
+        if (identity == null) throw new BadRequestException("Invalid or expired refresh token.");
+        User user = userRepository.findById(identity.userId())
                 .orElseThrow(() -> new BadRequestException("Account no longer exists."));
+        if (user.getStatus() != AccountStatus.ACTIVE
+                || user.getTokenVersion() != identity.tokenVersion()) {
+            throw new BadRequestException("Invalid or expired refresh token.");
+        }
         return buildAuthResponse(user);
     }
 
@@ -91,25 +117,31 @@ public class AuthService {
             throw new BadRequestException("Social login requires an email address.");
         }
 
-        User user = userRepository.findByEmailIgnoreCase(info.email())
+        User user = userRepository.findByEmailIgnoreCase(normalizeEmail(info.email()))
                 .map(existing -> {
                     if (existing.getRole() == Role.ADMIN) {
                         throw new BadRequestException("Social login is not allowed for admin accounts.");
+                    }
+                    if (existing.getStatus() != AccountStatus.ACTIVE) {
+                        throw new BadRequestException("This account is not active.");
                     }
                     existing.setName(info.name() != null ? info.name() : existing.getName());
                     if (info.picture() != null) {
                         existing.setAvatar(info.picture());
                     }
+                    updateMarketingPreference(existing, req.marketingOptIn());
                     existing.setLastActiveAt(Instant.now());
                     return userRepository.save(existing);
                 })
                 .orElseGet(() -> userRepository.save(User.builder()
                         .name(info.name() != null ? info.name() : info.email())
-                        .email(info.email().toLowerCase())
+                        .email(normalizeEmail(info.email()))
                         .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                         .role(Role.BUYER)
                         .status(AccountStatus.ACTIVE)
                         .avatar(info.picture())
+                        .marketingOptIn(Boolean.TRUE.equals(req.marketingOptIn()))
+                        .marketingOptInAt(Boolean.TRUE.equals(req.marketingOptIn()) ? Instant.now() : null)
                         .build()));
 
         return buildAuthResponse(user);
@@ -140,7 +172,8 @@ public class AuthService {
     }
 
     private SocialUserInfo verifyGoogleIdToken(String idToken) {
-        JsonNode response = fetchJson(String.format(GOOGLE_TOKEN_INFO_URL, idToken));
+        JsonNode response = fetchJson(String.format(GOOGLE_ID_TOKEN_INFO_URL, encode(idToken)));
+        verifyGoogleAudience(response);
         if (!response.hasNonNull("email")) {
             throw new BadRequestException("Google login failed: email not available.");
         }
@@ -156,6 +189,8 @@ public class AuthService {
     }
 
     private SocialUserInfo verifyGoogleAccessToken(String accessToken) {
+        JsonNode tokenInfo = fetchJson(String.format(GOOGLE_ACCESS_TOKEN_INFO_URL, encode(accessToken)));
+        verifyGoogleAudience(tokenInfo);
         JsonNode response = fetchAuthorizedJson(
                 "https://www.googleapis.com/oauth2/v3/userinfo",
                 accessToken
@@ -176,7 +211,21 @@ public class AuthService {
     }
 
     private SocialUserInfo verifyFacebookToken(String accessToken) {
-        JsonNode response = fetchJson(String.format(FACEBOOK_ME_URL, accessToken));
+        String appId = appProperties.getOauth().getFacebookAppId();
+        String appSecret = appProperties.getOauth().getFacebookAppSecret();
+        if (appId == null || appId.isBlank() || appSecret == null || appSecret.isBlank()) {
+            throw new BadRequestException("Facebook login is not configured on the server.");
+        }
+        JsonNode debug = fetchJson(String.format(
+                FACEBOOK_DEBUG_URL,
+                encode(accessToken),
+                encode(appId + "|" + appSecret)));
+        JsonNode data = debug.path("data");
+        if (!data.path("is_valid").asBoolean(false) || !appId.equals(data.path("app_id").asText())) {
+            throw new BadRequestException("Facebook login failed: invalid token.");
+        }
+
+        JsonNode response = fetchAuthorizedJson(FACEBOOK_ME_URL, accessToken);
         if (!response.hasNonNull("email")) {
             throw new BadRequestException("Facebook login failed: email not available. Grant email permission and try again.");
         }
@@ -195,6 +244,7 @@ public class AuthService {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(8))
                     .header("Authorization", "Bearer " + bearerToken)
                     .GET()
                     .build();
@@ -203,8 +253,10 @@ public class AuthService {
                 throw new BadRequestException("Social login failed: invalid token or provider response.");
             }
             return OBJECT_MAPPER.readTree(response.body());
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new BadRequestException("Social login failed: unable to verify token.");
+        } catch (IOException e) {
             throw new BadRequestException("Social login failed: unable to verify token.");
         }
     }
@@ -213,6 +265,7 @@ public class AuthService {
         try {
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(url))
+                    .timeout(Duration.ofSeconds(8))
                     .GET()
                     .build();
             HttpResponse<String> response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
@@ -220,13 +273,40 @@ public class AuthService {
                 throw new BadRequestException("Social login failed: invalid token or provider response.");
             }
             return OBJECT_MAPPER.readTree(response.body());
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
+            throw new BadRequestException("Social login failed: unable to verify token.");
+        } catch (IOException e) {
             throw new BadRequestException("Social login failed: unable to verify token.");
         }
     }
 
+    private void verifyGoogleAudience(JsonNode tokenInfo) {
+        String expectedClientId = appProperties.getOauth().getGoogleClientId();
+        if (expectedClientId == null || expectedClientId.isBlank()) {
+            throw new BadRequestException("Google login is not configured on the server.");
+        }
+        String audience = tokenInfo.path("aud").asText(tokenInfo.path("issued_to").asText(""));
+        if (!expectedClientId.equals(audience)) {
+            throw new BadRequestException("Google login failed: token was issued for another application.");
+        }
+    }
+
+    private String encode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
     private record SocialUserInfo(String email, String name, String picture) {}
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
+    }
+
+    private void updateMarketingPreference(User user, Boolean marketingOptIn) {
+        if (marketingOptIn == null) return;
+        user.setMarketingOptIn(marketingOptIn);
+        user.setMarketingOptInAt(marketingOptIn ? Instant.now() : null);
+    }
 
     private enum SocialProvider {
         GOOGLE,

@@ -12,7 +12,7 @@ export function AdminPageHeader({
   actions?: React.ReactNode
 }) {
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="admin-enter mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 className="text-2xl font-bold text-foreground">{title}</h1>
         <nav className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -32,12 +32,14 @@ export function AdminPageHeader({
 export function AdminCard({
   children,
   className,
+  style,
 }: {
   children: React.ReactNode
   className?: string
+  style?: React.CSSProperties
 }) {
   return (
-    <div className={cn("rounded-xl border border-border bg-card p-5 shadow-sm", className)}>
+    <div className={cn("admin-panel rounded-xl border border-border/80 bg-white p-5", className)} style={style}>
       {children}
     </div>
   )
@@ -88,16 +90,20 @@ export function PrimaryButton({
   href,
   onClick,
   type = "button",
+  form,
+  disabled,
   className,
 }: {
   children: React.ReactNode
   href?: string
   onClick?: () => void
   type?: "button" | "submit"
+  form?: string
+  disabled?: boolean
   className?: string
 }) {
   const cls = cn(
-    "inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90",
+    "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[0_8px_22px_-14px_rgb(117_75_51_/_0.8)] transition-[background-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_12px_26px_-14px_rgb(117_75_51_/_0.9)] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0",
     className,
   )
   if (href) {
@@ -108,7 +114,7 @@ export function PrimaryButton({
     )
   }
   return (
-    <button type={type} onClick={onClick} className={cls}>
+    <button type={type} form={form} disabled={disabled} onClick={onClick} className={cls}>
       {children}
     </button>
   )

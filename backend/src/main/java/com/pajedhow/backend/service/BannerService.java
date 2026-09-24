@@ -22,12 +22,12 @@ public class BannerService {
 
     @Transactional(readOnly = true)
     public List<BannerResponse> findAll() {
-        return bannerRepository.findAll().stream().map(Mappers::toBanner).toList();
+        return bannerRepository.findAllByOrderBySortOrderAscIdAsc().stream().map(Mappers::toBanner).toList();
     }
 
     @Transactional(readOnly = true)
     public List<BannerResponse> findActive() {
-        return bannerRepository.findByStatus(BannerStatus.ACTIVE).stream().map(Mappers::toBanner).toList();
+        return bannerRepository.findByStatusOrderBySortOrderAscIdAsc(BannerStatus.ACTIVE).stream().map(Mappers::toBanner).toList();
     }
 
     @Transactional
@@ -36,6 +36,12 @@ public class BannerService {
                 .title(req.title())
                 .location(req.location())
                 .image(req.image())
+                .headline(req.headline())
+                .description(req.description())
+                .ctaLabel(req.ctaLabel())
+                .price(req.price())
+                .discountPercentage(req.discountPercentage())
+                .sortOrder(req.sortOrder() != null ? req.sortOrder() : 0)
                 .status(parseStatus(req.status()))
                 .build();
         return Mappers.toBanner(bannerRepository.save(b));
@@ -47,6 +53,12 @@ public class BannerService {
         b.setTitle(req.title());
         b.setLocation(req.location());
         b.setImage(req.image());
+        b.setHeadline(req.headline());
+        b.setDescription(req.description());
+        b.setCtaLabel(req.ctaLabel());
+        b.setPrice(req.price());
+        b.setDiscountPercentage(req.discountPercentage());
+        b.setSortOrder(req.sortOrder() != null ? req.sortOrder() : 0);
         b.setStatus(parseStatus(req.status()));
         return Mappers.toBanner(bannerRepository.save(b));
     }

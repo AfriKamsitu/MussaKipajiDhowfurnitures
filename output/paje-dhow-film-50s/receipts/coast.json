@@ -1,0 +1,33 @@
+{
+  "id": "coast",
+  "service": "https://zerogpu-aoti-wan2-2-fp8da-aoti-faster.hf.space",
+  "event_id": "46dfe95e82a94b5c897d56dc97024417",
+  "status": "completed",
+  "source": "coast",
+  "settings": [
+    "Gentle waves repeatedly wash onto the Zanzibar sand and withdraw. The wooden dhow rocks subtly in the water, its rope and sail edge stir in the breeze. Palm fronds move naturally. Very slow low lateral tracking shot past the weathered blue-painted dhow timbers in the foreground. Keep the foreground timber texture sharp; actual water and foliage movement, not a still photograph. Photorealistic premium Zanzibar furniture brand film, warm restrained natural sunlight, earthy aged timber and cream. Preserve the input image's people, clothing, architecture and furniture construction. Reclaimed dhow wood keeps old nail holes, cracks, joinery scars, dark marks and weathered grain. Never glossy or factory made. Real physical motion, stable solid geometry, credible hands and tool contact. One continuous shot, no cuts, no text or logos, no invented lettering. Slow deliberate cinematic camera.",
+    6,
+    "still image, freeze frame, slideshow, only camera zoom, frozen people, no subject motion, cartoon, CGI, oversaturated, distorted hands, extra fingers, extra limbs, duplicated people, changing faces, changing clothes, melting wood, floating board, unstable furniture, industrial factory, glossy timber, random lettering, subtitles, logos, watermark, abrupt camera motion",
+    5.0,
+    1,
+    1,
+    42,
+    false
+  ],
+  "result": [
+    {
+      "path": "/tmp/gradio/c49f457052106fda80922dee8ea8cc0245bf40bac1ad7bfd921222cf44f1abcc/tmpl2sl8b48.mp4",
+      "url": "https://zerogpu-aoti-wan2-2-fp8da-aoti-faster.hf.space/gradio_api/file=/tmp/gradio/c49f457052106fda80922dee8ea8cc0245bf40bac1ad7bfd921222cf44f1abcc/tmpl2sl8b48.mp4",
+      "size": null,
+      "orig_name": "tmpl2sl8b48.mp4",
+      "mime_type": null,
+      "is_stream": false,
+      "meta": {
+        "_type": "gradio.FileData"
+      }
+    },
+    42
+  ],
+  "saved_video": "D:\\Projects\\Mussa haruni\\Pajedhowfurnitures\\output\\paje-dhow-film-50s\\clips\\coast.mp4",
+  "bytes": 1308286
+}

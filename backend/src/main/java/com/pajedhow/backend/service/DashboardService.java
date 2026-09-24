@@ -28,16 +28,18 @@ public class DashboardService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
+    private final SystemSettingsService settingsService;
 
     @Transactional(readOnly = true)
     public DashboardResponse overview() {
         BigDecimal revenue = orderRepository.totalRevenue();
+        String currency = settingsService.getPublicSettings().currency();
         long totalOrders = orderRepository.count();
         long totalCustomers = userRepository.countByRole(Role.BUYER);
         long totalProducts = productRepository.countByStatus(ProductStatus.PUBLISHED);
 
         List<StatCard> stats = List.of(
-                new StatCard("Total Revenue", "TZS " + formatAmount(revenue), "dollar-sign"),
+                new StatCard("Total Revenue", currency + " " + formatAmount(revenue), "dollar-sign"),
                 new StatCard("Orders", String.valueOf(totalOrders), "shopping-bag"),
                 new StatCard("Customers", String.valueOf(totalCustomers), "users"),
                 new StatCard("Products", String.valueOf(totalProducts), "package")

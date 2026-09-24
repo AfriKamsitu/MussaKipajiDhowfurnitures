@@ -7,6 +7,7 @@ import { Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react"
 import { authInputClass } from "@/components/auth/auth-shell"
 import { SocialAuth } from "@/components/auth/social-auth"
 import { useAuth } from "@/components/auth-provider"
+import { withMinimumDuration } from "@/lib/timing"
 
 export function RegisterForm() {
   const router = useRouter()
@@ -16,145 +17,104 @@ export function RegisterForm() {
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [marketingOptIn, setMarketingOptIn] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
     setError(null)
     setLoading(true)
-    const { error: err } = await signUp({
-      name: `${firstName} ${lastName}`.trim(),
-      email,
-      password,
-    })
-    setLoading(false)
-    if (err) {
-      setError(err)
-      return
+    try {
+      const { error: signUpError } = await withMinimumDuration(
+        signUp({
+          name: `${firstName} ${lastName}`.trim(),
+          email: email.trim().toLowerCase(),
+          password,
+          marketingOptIn,
+        }),
+      )
+      if (signUpError) {
+        setError(signUpError)
+        return
+      }
+      router.push("/account")
+      router.refresh()
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Registration failed.")
+    } finally {
+      setLoading(false)
     }
-    router.push("/account")
-    router.refresh()
   }
 
   async function handleProvider(provider: "google" | "facebook") {
     setError(null)
     setLoading(true)
-    const { error: err, redirected } = await signInWithProvider(provider)
-    setLoading(false)
-    if (err) {
-      setError(err)
-      return
+    try {
+      const { error: signInError, redirected } = await withMinimumDuration(
+        signInWithProvider(provider, undefined, marketingOptIn ? true : undefined),
+      )
+      if (signInError) {
+        setError(signInError)
+        return
+      }
+      if (redirected) return
+      router.push("/account")
+      router.refresh()
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Social registration failed.")
+    } finally {
+      setLoading(false)
     }
-    if (redirected) return
-    router.push("/account")
-    router.refresh()
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-5">
+    <form onSubmit={handleSubmit} className="grid gap-5" aria-busy={loading}>
       <SocialAuth action="Sign up" onProvider={handleProvider} disabled={loading} />
-      {error && (
-        <p className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </p>
-      )}
+      {error && <p role="alert" aria-live="assertive" className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>}
       <div className="grid gap-5 sm:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-foreground">First Name</label>
+          <label htmlFor="register-first-name" className="mb-1.5 block text-sm font-semibold text-foreground">First name</label>
           <div className="relative">
             <User className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              required
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              placeholder="John"
-              className={`${authInputClass} pl-9`}
-              autoComplete="given-name"
-            />
+            <input id="register-first-name" required disabled={loading} value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="First name" className={`${authInputClass} pl-9`} autoComplete="given-name" />
           </div>
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-foreground">Last Name</label>
-          <input
-            required
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            placeholder="Doe"
-            className={authInputClass}
-            autoComplete="family-name"
-          />
+          <label htmlFor="register-last-name" className="mb-1.5 block text-sm font-semibold text-foreground">Last name</label>
+          <input id="register-last-name" required disabled={loading} value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Last name" className={authInputClass} autoComplete="family-name" />
         </div>
       </div>
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground">Email Address</label>
+        <label htmlFor="register-email" className="mb-1.5 block text-sm font-semibold text-foreground">Email address</label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            required
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className={`${authInputClass} pl-9`}
-            autoComplete="email"
-          />
+          <input id="register-email" required disabled={loading} type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className={`${authInputClass} pl-9`} autoComplete="email" />
         </div>
       </div>
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-foreground">Password</label>
+        <label htmlFor="register-password" className="mb-1.5 block text-sm font-semibold text-foreground">Password</label>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-          <input
-            required
-            minLength={6}
-            type={show ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 6 characters"
-            className={`${authInputClass} px-9`}
-            autoComplete="new-password"
-          />
-          <button
-            type="button"
-            onClick={() => setShow((v) => !v)}
-            aria-label={show ? "Hide password" : "Show password"}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
+          <input id="register-password" required disabled={loading} minLength={8} type={show ? "text" : "password"} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 8 characters" className={`${authInputClass} px-9`} autoComplete="new-password" aria-describedby="register-password-help" />
+          <button type="button" disabled={loading} onClick={() => setShow((current) => !current)} aria-label={show ? "Hide password" : "Show password"} className="absolute right-0.5 top-1/2 grid size-11 -translate-y-1/2 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground">
             {show ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
           </button>
         </div>
+        <p id="register-password-help" className="mt-1.5 text-xs leading-5 text-muted-foreground">Use 8 or more characters.</p>
       </div>
-      <label className="flex items-start gap-2 text-sm text-muted-foreground">
-        <input required type="checkbox" className="mt-0.5 size-4 rounded border-border accent-[var(--accent)]" />
-        <span>
-          I agree to the{" "}
-          <Link href="/" className="font-medium text-accent hover:underline">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/" className="font-medium text-accent hover:underline">
-            Privacy Policy
-          </Link>
-        </span>
+      <label className="flex items-start gap-2.5 text-sm leading-5 text-muted-foreground">
+        <input required disabled={loading} type="checkbox" className="mt-0.5 size-4 rounded border-border accent-[var(--primary)]" />
+        <span>I agree to the <Link href="/" className="font-semibold text-primary hover:underline">Terms of Service</Link> and <Link href="/" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.</span>
       </label>
-      <button
-        type="submit"
-        disabled={loading}
-        className="flex w-full items-center justify-center gap-2 rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-70"
-      >
-        {loading && <Loader2 className="size-4 animate-spin" />}
-        Create Account
+      <label className="flex items-start gap-2.5 rounded-lg border border-border bg-secondary/35 p-3 text-sm leading-5 text-muted-foreground">
+        <input type="checkbox" disabled={loading} checked={marketingOptIn} onChange={(event) => setMarketingOptIn(event.target.checked)} className="mt-0.5 size-4 rounded border-border accent-[var(--primary)]" />
+        <span>Email me new furniture, special offers, and workshop updates. I can unsubscribe anytime.</span>
+      </label>
+      <button type="submit" disabled={loading} className="interactive-press flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-70">
+        {loading ? <><Loader2 className="size-4 animate-spin" aria-hidden="true" />Creating account...</> : "Create account"}
       </button>
-      <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
-        <Link href="/login" className="font-medium text-accent hover:underline">
-          Sign in
-        </Link>
-      </p>
-      <p className="text-center text-xs text-muted-foreground">
-        New accounts are buyers. Google/Facebook also create a buyer profile.
-      </p>
+      <p className="text-center text-sm text-muted-foreground">Already have an account?{" "}<Link href="/login" className="inline-flex min-h-11 items-center font-semibold text-primary hover:underline">Sign in</Link></p>
     </form>
   )
 }

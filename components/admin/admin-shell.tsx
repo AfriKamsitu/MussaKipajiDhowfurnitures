@@ -1,59 +1,75 @@
 "use client"
 
-import { useState } from "react"
-import { Bell, Menu, Search } from "lucide-react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
+import { Menu } from "lucide-react"
 import { AdminSidebar } from "@/components/admin/admin-sidebar"
 import { useAuth } from "@/components/auth-provider"
 
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
   const { user } = useAuth()
   const initials = (user?.name || "Admin User")
     .split(" ")
-    .map((p) => p[0])
+    .map((part) => part[0])
     .slice(0, 2)
     .join("")
     .toUpperCase()
 
+  useEffect(() => {
+    if (!sidebarOpen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    window.requestAnimationFrame(() => {
+      document.querySelector<HTMLButtonElement>("[data-admin-drawer-close]")?.focus()
+    })
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return
+      setSidebarOpen(false)
+      menuButtonRef.current?.focus()
+    }
+
+    window.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [sidebarOpen])
+
   return (
-    <div className="admin-theme flex min-h-screen bg-background text-foreground">
+    <div className="admin-theme admin-workspace flex min-h-screen text-foreground">
       <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Topbar */}
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-card/80 px-4 py-3 backdrop-blur lg:px-6">
+        <header className="admin-glass sticky top-0 z-30 flex min-h-16 items-center gap-3 border-b border-border/80 px-4 py-3 shadow-[0_1px_0_rgb(40_25_18_/_0.03)] lg:px-6">
           <button
+            ref={menuButtonRef}
+            type="button"
             onClick={() => setSidebarOpen(true)}
-            className="text-muted-foreground lg:hidden"
-            aria-label="Open menu"
+            className="grid size-11 place-items-center rounded-full text-muted-foreground transition-[background-color,color,transform] hover:scale-105 hover:bg-primary/10 hover:text-primary active:scale-95 lg:hidden"
+            aria-label="Open admin menu"
+            aria-expanded={sidebarOpen}
+            aria-controls="admin-sidebar"
           >
             <Menu className="size-5" />
           </button>
 
-          <div className="relative hidden max-w-md flex-1 sm:block">
-            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder="Search..."
-              className="w-full rounded-lg border border-border bg-secondary py-2 pl-9 pr-3 text-sm outline-none transition-colors focus:border-ring focus:bg-card"
-            />
+          <div>
+            <p className="text-sm font-bold text-foreground sm:hidden">Paje Dhow Admin</p>
+            <p className="hidden text-sm font-semibold text-foreground sm:block">Administration workspace</p>
           </div>
 
           <div className="ml-auto flex items-center gap-3">
-            <button
-              className="relative flex size-9 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:text-foreground"
-              aria-label="Notifications"
-            >
-              <Bell className="size-[18px]" />
-              <span className="absolute right-2 top-2 size-2 rounded-full bg-destructive" />
-            </button>
-            <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+            <span className="flex size-10 items-center justify-center rounded-full border border-primary/15 bg-primary/10 text-sm font-semibold text-primary shadow-sm">
               {initials || "AU"}
             </span>
           </div>
         </header>
 
-        <main className="flex-1 p-4 lg:p-6">{children}</main>
+        <main id="main-content" className="admin-enter flex-1 p-4 sm:p-5 lg:p-6">
+          {children}
+        </main>
       </div>
     </div>
   )

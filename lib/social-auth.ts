@@ -74,9 +74,7 @@ export function getFacebookAppId() {
 export async function requestGoogleAccessToken(): Promise<string> {
   const clientId = getGoogleClientId()
   if (!clientId) {
-    throw new Error(
-      "Google sign-in is not configured. Set NEXT_PUBLIC_GOOGLE_CLIENT_ID in .env.local.",
-    )
+    throw new Error("Google sign-in is currently unavailable.")
   }
 
   await loadScript(GOOGLE_SCRIPT, "google-gsi-client")
@@ -150,9 +148,7 @@ async function ensureFacebookSdk(appId: string): Promise<void> {
 export async function requestFacebookAccessToken(): Promise<string> {
   const appId = getFacebookAppId()
   if (!appId) {
-    throw new Error(
-      "Facebook sign-in is not configured. Set NEXT_PUBLIC_FACEBOOK_APP_ID in .env.local.",
-    )
+    throw new Error("Facebook sign-in is currently unavailable.")
   }
 
   await ensureFacebookSdk(appId)

@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import { Loader2 } from "lucide-react"
-import { getFacebookAppId, getGoogleClientId } from "@/lib/social-auth"
 
 function GoogleIcon() {
   return (
@@ -48,8 +47,18 @@ export function SocialAuth({
   disabled?: boolean
 }) {
   const [pending, setPending] = useState<"google" | "facebook" | null>(null)
-  const googleReady = Boolean(getGoogleClientId())
-  const facebookReady = Boolean(getFacebookAppId())
+  const providers = [
+    {
+      id: "google" as const,
+      label: "Google",
+      icon: <GoogleIcon />,
+    },
+    {
+      id: "facebook" as const,
+      label: "Facebook",
+      icon: <FacebookIcon />,
+    },
+  ]
 
   async function handleClick(provider: "google" | "facebook") {
     if (disabled || pending) return
@@ -64,44 +73,19 @@ export function SocialAuth({
   return (
     <div className="grid gap-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <button
-          type="button"
-          disabled={disabled || !!pending || !googleReady}
-          onClick={() => handleClick("google")}
-          title={
-            googleReady
-              ? undefined
-              : "Set NEXT_PUBLIC_GOOGLE_CLIENT_ID to enable Google sign-in"
-          }
-          className="flex items-center justify-center gap-2.5 rounded-md border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-secondary disabled:pointer-events-none disabled:opacity-60"
-        >
-          {pending === "google" ? <Loader2 className="size-4 animate-spin" /> : <GoogleIcon />}
-          <span>Google</span>
-        </button>
-        <button
-          type="button"
-          disabled={disabled || !!pending || !facebookReady}
-          onClick={() => handleClick("facebook")}
-          title={
-            facebookReady
-              ? undefined
-              : "Set NEXT_PUBLIC_FACEBOOK_APP_ID to enable Facebook sign-in"
-          }
-          className="flex items-center justify-center gap-2.5 rounded-md border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-secondary disabled:pointer-events-none disabled:opacity-60"
-        >
-          {pending === "facebook" ? <Loader2 className="size-4 animate-spin" /> : <FacebookIcon />}
-          <span>Facebook</span>
-        </button>
+        {providers.map((provider) => (
+          <button
+            key={provider.id}
+            type="button"
+            disabled={disabled || !!pending}
+            onClick={() => handleClick(provider.id)}
+            className="interactive-press flex min-h-11 items-center justify-center gap-2.5 rounded-lg border border-border bg-white px-4 text-sm font-semibold text-foreground shadow-soft transition-all duration-200 hover:-translate-y-0.5 hover:bg-secondary disabled:pointer-events-none disabled:opacity-60"
+          >
+            {pending === provider.id ? <Loader2 className="size-4 animate-spin" aria-hidden="true" /> : provider.icon}
+            <span>{provider.label}</span>
+          </button>
+        ))}
       </div>
-      {(!googleReady || !facebookReady) && (
-        <p className="text-xs text-muted-foreground">
-          {!googleReady && !facebookReady
-            ? "Configure Google and Facebook OAuth client IDs in .env.local to enable social sign-in."
-            : !googleReady
-              ? "Google sign-in needs NEXT_PUBLIC_GOOGLE_CLIENT_ID."
-              : "Facebook sign-in needs NEXT_PUBLIC_FACEBOOK_APP_ID."}
-        </p>
-      )}
       <div className="flex items-center gap-3">
         <span className="h-px flex-1 bg-border" />
         <span className="text-xs text-muted-foreground">Or {action.toLowerCase()} with email</span>

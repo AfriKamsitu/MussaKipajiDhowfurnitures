@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { MapPin, Plus, Star, Trash2, X } from "lucide-react"
+import { Loader2, MapPin, Plus, Star, Trash2, X } from "lucide-react"
 import { useAuth, type Address } from "@/components/auth-provider"
 import { authInputClass } from "@/components/auth/auth-shell"
 import { cn } from "@/lib/utils"
@@ -21,6 +21,8 @@ export function AddressesView() {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState<Address | null>(null)
   const [form, setForm] = useState(empty)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   if (!user) return null
 
@@ -32,24 +34,56 @@ export function AddressesView() {
 
   function startEdit(addr: Address) {
     setEditing(addr)
-    const { id: _id, ...rest } = addr
-    setForm(rest)
+    setForm({
+      label: addr.label,
+      fullName: addr.fullName,
+      phone: addr.phone,
+      street: addr.street,
+      city: addr.city,
+      region: addr.region,
+      isDefault: addr.isDefault,
+    })
     setOpen(true)
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (editing) updateAddress(editing.id, form)
-    else addAddress(form)
-    setOpen(false)
+    setSaving(true)
+    setError(null)
+    try {
+      if (editing) await updateAddress(editing.id, form)
+      else await addAddress(form)
+      setOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The address could not be saved.")
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleAddressAction(action: () => Promise<void>) {
+    setSaving(true)
+    setError(null)
+    try {
+      await action()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The address could not be updated.")
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="space-y-5">
+      {error && (
+        <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </p>
+      )}
       <div className="flex justify-end">
         <button
           onClick={startAdd}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-bold text-primary-foreground shadow-accent-glow transition-colors hover:bg-accent"
         >
           <Plus className="size-4" />
           Add Address
@@ -57,7 +91,7 @@ export function AddressesView() {
       </div>
 
       {user.addresses.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border bg-card py-16 text-center shadow-soft">
+        <div className="surface-premium flex flex-col items-center justify-center gap-4 rounded-3xl px-6 py-16 text-center">
           <span className="flex size-16 items-center justify-center rounded-full bg-secondary text-accent">
             <MapPin className="size-7" />
           </span>
@@ -67,7 +101,7 @@ export function AddressesView() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {user.addresses.map((addr) => (
-            <div key={addr.id} className="relative rounded-xl border border-border bg-card p-5 shadow-soft">
+            <div key={addr.id} className="surface-premium relative rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:shadow-premium">
               <div className="mb-2 flex items-center gap-2">
                 <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium text-foreground">
                   {addr.label}
@@ -90,14 +124,16 @@ export function AddressesView() {
                 </button>
                 {!addr.isDefault && (
                   <button
-                    onClick={() => updateAddress(addr.id, { isDefault: true })}
+                    onClick={() => void handleAddressAction(() => updateAddress(addr.id, { isDefault: true }))}
+                    disabled={saving}
                     className="font-medium text-foreground hover:text-accent"
                   >
                     Set default
                   </button>
                 )}
                 <button
-                  onClick={() => removeAddress(addr.id)}
+                  onClick={() => void handleAddressAction(() => removeAddress(addr.id))}
+                  disabled={saving}
                   className="ml-auto inline-flex items-center gap-1 font-medium text-destructive hover:underline"
                 >
                   <Trash2 className="size-3.5" />
@@ -122,6 +158,11 @@ export function AddressesView() {
                 <X className="size-5 text-muted-foreground" />
               </button>
             </div>
+            {error && (
+              <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {error}
+              </p>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1.5 block text-sm font-medium text-foreground">Label</label>
@@ -198,11 +239,12 @@ export function AddressesView() {
               </button>
               <button
                 type="submit"
+                disabled={saving}
                 className={cn(
-                  "flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90",
+                  "flex-1 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",
                 )}
               >
-                {editing ? "Save" : "Add"}
+                {saving ? <Loader2 className="mx-auto size-4 animate-spin" /> : editing ? "Save" : "Add"}
               </button>
             </div>
           </form>

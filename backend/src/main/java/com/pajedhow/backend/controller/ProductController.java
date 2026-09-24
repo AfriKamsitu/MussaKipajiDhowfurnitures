@@ -35,7 +35,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ProductResponse getById(@PathVariable Long id) {
-        return productService.getById(id);
+        return productService.getPublishedById(id);
     }
 
     @GetMapping("/{id}/reviews")

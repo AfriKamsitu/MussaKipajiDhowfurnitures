@@ -16,6 +16,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { useStoreSettings } from "@/components/store-settings-provider"
+import { formatPrice } from "@/lib/data"
 
 const salesConfig = {
   value: { label: "Sales", color: "var(--chart-1)" },
@@ -34,6 +36,7 @@ export function SalesOverviewChart({
 }: {
   data?: Array<{ day: string; value: number }>
 }) {
+  const { currency } = useStoreSettings()
   if (!data.length) {
     return <p className="py-16 text-center text-sm text-muted-foreground">No sales data yet</p>
   }
@@ -58,7 +61,7 @@ export function SalesOverviewChart({
         />
         <ChartTooltip
           content={
-            <ChartTooltipContent formatter={(value) => `TZS ${Number(value).toLocaleString()}`} />
+            <ChartTooltipContent formatter={(value) => formatPrice(Number(value), currency)} />
           }
         />
         <Area
@@ -92,17 +95,17 @@ function DonutChart({
   ) satisfies ChartConfig
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row">
-      <div className="relative">
-        <ChartContainer config={config} className="h-[180px] w-[180px]">
+    <div className="grid min-w-0 items-center gap-5 sm:grid-cols-[152px_minmax(0,1fr)]">
+      <div className="relative mx-auto size-[152px] shrink-0">
+        <ChartContainer config={config} className="size-[152px]">
           <PieChart>
             <ChartTooltip content={<ChartTooltipContent nameKey="name" hideLabel />} />
             <Pie
               data={data}
               dataKey="value"
               nameKey="name"
-              innerRadius={58}
-              outerRadius={82}
+              innerRadius={48}
+              outerRadius={69}
               strokeWidth={2}
               paddingAngle={2}
               isAnimationActive={false}
@@ -118,12 +121,19 @@ function DonutChart({
           <span className="text-[11px] text-muted-foreground">{centerLabel}</span>
         </div>
       </div>
-      <ul className="flex-1 space-y-2">
+      <ul className="min-w-0 space-y-1.5">
         {data.map((d) => (
-          <li key={d.name} className="flex items-center gap-2 text-sm">
-            <span className="size-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-            <span className="flex-1 text-muted-foreground">{d.name}</span>
-            <span className="font-medium text-foreground">{d.value}</span>
+          <li
+            key={d.name}
+            className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md px-2 py-1.5 text-sm"
+          >
+            <span className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: d.color }} />
+            <span className="min-w-0 truncate text-muted-foreground" title={d.name}>
+              {d.name}
+            </span>
+            <span className="min-w-6 text-right font-semibold tabular-nums text-foreground">
+              {d.value}
+            </span>
           </li>
         ))}
       </ul>

@@ -4,6 +4,8 @@ import com.pajedhow.backend.entity.enums.Enums.BannerStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "banners")
 @Getter
@@ -25,6 +27,22 @@ public class Banner {
 
     @Column(length = 1024)
     private String image;
+
+    private String headline;
+
+    @Column(length = 1024)
+    private String description;
+
+    private String ctaLabel;
+
+    @Column(precision = 14, scale = 2)
+    private BigDecimal price;
+
+    private Integer discountPercentage;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Integer sortOrder = 0;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 12)

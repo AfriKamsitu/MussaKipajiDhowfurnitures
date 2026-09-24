@@ -13,11 +13,11 @@ export function SectionHeading({
   actionHref?: string
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3 sm:mb-6">
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center gap-3">
-          <span className="h-7 w-1.5 rounded-full bg-accent" />
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">{title}</h2>
+          <span className="h-6 w-1.5 rounded-full bg-accent sm:h-7" />
+          <h2 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">{title}</h2>
         </div>
         {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
       </div>

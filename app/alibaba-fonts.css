@@ -1,0 +1,81 @@
+@font-face {
+  font-family: 'Alibaba Sans';
+  src: url('/fonts/alibaba-sans/AlibabaSans-Light.otf') format('opentype');
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Alibaba Sans';
+  src: url('/fonts/alibaba-sans/AlibabaSans-Regular.otf') format('opentype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Alibaba Sans';
+  src: url('/fonts/alibaba-sans/AlibabaSans-Medium.otf') format('opentype');
+  font-style: normal;
+  /* The bundled Medium face serves both medium and semibold UI tokens. */
+  font-weight: 500 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Alibaba Sans';
+  src: url('/fonts/alibaba-sans/AlibabaSans-Bold.otf') format('opentype');
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Alibaba Sans';
+  src: url('/fonts/alibaba-sans/AlibabaSans-Heavy.otf') format('opentype');
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Alibaba Sans';
+  src: url('/fonts/alibaba-sans/AlibabaSans-Black.otf') format('opentype');
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+}
+
+:root,
+.admin-theme {
+  --font-sans: 'Alibaba Sans', 'Alibaba PuHuiTi', 'Helvetica Neue', Arial, sans-serif;
+  --font-heading: 'Alibaba Sans', 'Alibaba PuHuiTi', 'Helvetica Neue', Arial, sans-serif;
+  --font-admin: 'Alibaba Sans', 'Alibaba PuHuiTi', 'Helvetica Neue', Arial, sans-serif;
+}
+
+html,
+body.font-sans,
+.admin-theme {
+  font-family: 'Alibaba Sans', 'Alibaba PuHuiTi', 'Helvetica Neue', Arial, sans-serif !important;
+  font-synthesis: none;
+}
+
+.admin-theme,
+.admin-theme :where(*) {
+  font-family: 'Alibaba Sans', 'Alibaba PuHuiTi', 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+body :where(button, input, select, textarea, option, code, kbd, pre, samp),
+.font-mono,
+svg text {
+  font-family: 'Alibaba Sans', 'Alibaba PuHuiTi', 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}

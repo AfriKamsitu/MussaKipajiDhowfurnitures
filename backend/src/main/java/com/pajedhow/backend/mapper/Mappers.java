@@ -14,6 +14,7 @@ public final class Mappers {
         return new UserDtos.UserResponse(
                 u.getId(), u.getName(), u.getEmail(), u.getPhone(), u.getAvatar(),
                 u.getRole().name(), u.getStatus().name(), u.getCreatedAt(), u.getLastActiveAt(),
+                u.isMarketingOptIn(), u.getMarketingOptInAt(),
                 u.getAddresses().stream().map(Mappers::toAddress).toList()
         );
     }
@@ -35,8 +36,12 @@ public final class Mappers {
 
     public static ProductDtos.ProductResponse toProduct(Product p) {
         return new ProductDtos.ProductResponse(
-                p.getId(), p.getSlug(), p.getName(), p.getCategory(), p.getPrice(), p.getOldPrice(),
-                p.getImage(), p.getRating(), p.getReviews(), p.isNew(), List.copyOf(p.getColors()),
+                p.getId(), p.getSlug(), p.getName(), p.getCategory(),
+                p.getShortDescription(), p.getDescription(), p.getPrice(), p.getOldPrice(),
+                p.getImage(),
+                p.getImages() == null ? List.of() : List.copyOf(p.getImages()),
+                p.getRating(), p.getReviews(), p.isNew(),
+                p.getColors() == null ? List.of() : List.copyOf(p.getColors()),
                 p.getMaterial(), p.getStatus().name(), p.getStock(), p.isInStock(), p.getSku(),
                 p.getMoq(), p.getWarrantyMonths(), p.getDeliveryDays(), toSupplier(p.getSupplier())
         );
@@ -81,7 +86,10 @@ public final class Mappers {
 
     public static MarketingDtos.BannerResponse toBanner(Banner b) {
         return new MarketingDtos.BannerResponse(
-                b.getId(), b.getTitle(), b.getLocation(), b.getImage(), b.getStatus().name()
+                b.getId(), b.getTitle(), b.getLocation(), b.getImage(),
+                b.getHeadline(), b.getDescription(), b.getCtaLabel(),
+                b.getPrice(), b.getDiscountPercentage(),
+                b.getSortOrder(), b.getStatus().name()
         );
     }
 

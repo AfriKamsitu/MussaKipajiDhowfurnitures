@@ -35,6 +35,13 @@ public class Product {
     @Column(name = "category_slug", nullable = false)
     private String category;
 
+    @Column(length = 500)
+    private String shortDescription;
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal price;
 
@@ -43,6 +50,12 @@ public class Product {
 
     @Column(length = 1024)
     private String image;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "image", length = 1024)
+    @Builder.Default
+    private List<String> images = new ArrayList<>();
 
     @Column(nullable = false)
     @Builder.Default

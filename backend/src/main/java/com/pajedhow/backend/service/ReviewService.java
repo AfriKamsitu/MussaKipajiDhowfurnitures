@@ -11,6 +11,7 @@ import com.pajedhow.backend.exception.BadRequestException;
 import com.pajedhow.backend.exception.ResourceNotFoundException;
 import com.pajedhow.backend.mapper.Mappers;
 import com.pajedhow.backend.repository.ProductRepository;
+import com.pajedhow.backend.repository.OrderRepository;
 import com.pajedhow.backend.repository.ReviewRepository;
 import com.pajedhow.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class ReviewService {
     private final ReviewRepository reviewRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final OrderRepository orderRepository;
 
     @Transactional(readOnly = true)
     public List<ReviewResponse> findAll() {
@@ -55,6 +57,15 @@ public class ReviewService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + req.productId()));
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found: " + userId));
+        if (user.isAdmin()) {
+            throw new BadRequestException("Admin accounts cannot submit product reviews");
+        }
+        if (reviewRepository.existsByUserIdAndProductId(userId, product.getId())) {
+            throw new BadRequestException("You have already reviewed this product");
+        }
+        if (!orderRepository.hasDeliveredProduct(userId, product.getId())) {
+            throw new BadRequestException("Only customers with a delivered order can review this product");
+        }
 
         Review review = Review.builder()
                 .user(user)

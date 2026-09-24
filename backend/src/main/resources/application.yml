@@ -2,15 +2,26 @@ server:
   port: 8080
   servlet:
     context-path: /
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+  tomcat:
+    max-http-form-post-size: 6MB
+    max-swallow-size: 6MB
 
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:backend/.env[.properties]
   application:
     name: pajedhowfurnitures
 
   datasource:
-    url: jdbc:mysql://localhost:3306/pajedhowfurnitures?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-    username: root
-    password: 0987654321
+    url: ${DB_URL:jdbc:mysql://localhost:3306/pajedhowfurnitures?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
@@ -28,22 +39,25 @@ spring:
 
 # Application-specific settings
 app:
+  public-url: ${APP_PUBLIC_URL:http://localhost:3000}
   jwt:
-    # Base64-encoded 256-bit secret. Override in production.
-    secret: 5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437
-    access-token-expiration-ms: 86400000      # 24 hours
-    refresh-token-expiration-ms: 604800000    # 7 days
+    secret: ${JWT_SECRET}
+    access-token-expiration-ms: 900000
+    refresh-token-expiration-ms: 604800000
     issuer: pajedhow-backend
 
-  cors:
-    allowed-origins:
-      - http://localhost:3000
-      - http://localhost:5173
-      - http://localhost:3001
-      - https://your-nextjs-app.vercel.app
+  admin:
+    email: ${ADMIN_EMAIL}
+    password: ${ADMIN_PASSWORD}
+    sync-password: ${ADMIN_SYNC_PASSWORD:false}
 
-  seed:
-    enabled: true
+  oauth:
+    google-client-id: ${GOOGLE_CLIENT_ID:}
+    facebook-app-id: ${FACEBOOK_APP_ID:}
+    facebook-app-secret: ${FACEBOOK_APP_SECRET:}
+
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:3001}
 
   whatsapp:
     phone: 255700000000
@@ -51,4 +65,4 @@ app:
 logging:
   level:
     org.springframework.security: INFO
-    com.pajedhow: DEBUG
+    com.pajedhow: INFO

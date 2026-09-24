@@ -3,7 +3,7 @@ import { AuthShell } from "@/components/auth/auth-shell"
 import { ResetForm } from "@/components/auth/reset-form"
 
 export const metadata: Metadata = {
-  title: "Reset Password — pajedhowfurnitures",
+  title: "Reset Password",
 }
 
 export default function ResetPasswordPage() {

@@ -1,9 +1,10 @@
 import type { Metadata } from "next"
-import { Breadcrumb, PageShell } from "@/components/page-shell"
+import { Breadcrumb, PageIntro, PageShell } from "@/components/page-shell"
 import { CheckoutView } from "@/components/checkout/checkout-view"
+import { PurchaseSteps } from "@/components/checkout/purchase-steps"
 
 export const metadata: Metadata = {
-  title: "Checkout — pajedhowfurnitures",
+  title: "Checkout",
 }
 
 export default function CheckoutPage() {
@@ -12,7 +13,9 @@ export default function CheckoutPage() {
       <Breadcrumb
         items={[{ label: "Home", href: "/" }, { label: "Cart", href: "/cart" }, { label: "Checkout" }]}
       />
-      <h1 className="mb-6 mt-4 text-2xl font-bold text-foreground">Checkout</h1>
+      <PageIntro eyebrow="Order details" title="Complete your request" description="Confirm your contact, delivery, and product details before continuing with our team on WhatsApp.">
+        <PurchaseSteps current="details" />
+      </PageIntro>
       <CheckoutView />
     </PageShell>
   )

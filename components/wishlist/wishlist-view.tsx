@@ -10,7 +10,7 @@ export function WishlistView() {
 
   if (wishlist.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-border bg-card py-20 text-center">
+      <div className="surface-premium flex flex-col items-center justify-center gap-4 rounded-3xl px-6 py-20 text-center">
         <span className="flex size-16 items-center justify-center rounded-full bg-secondary text-accent">
           <Heart className="size-7" />
         </span>
@@ -18,7 +18,7 @@ export function WishlistView() {
         <p className="text-sm text-muted-foreground">Save items you love to find them easily later.</p>
         <Link
           href="/shop"
-          className="mt-2 rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          className="mt-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-accent"
         >
           Explore Products
         </Link>
@@ -27,7 +27,7 @@ export function WishlistView() {
   }
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:gap-5 sm:grid-cols-3 lg:grid-cols-3">
+    <div className="grid grid-cols-2 gap-3 sm:gap-5 sm:grid-cols-3 xl:grid-cols-4">
       {wishlist.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}

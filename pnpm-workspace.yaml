@@ -1,0 +1,18 @@
+packages:
+  - "."
+
+# This repository reviews and commits its lockfile; avoid re-querying registry
+# attestations for every already-locked transitive dependency in local/CI runs.
+trustLockfile: true
+
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+
+overrides:
+  hono: 4.12.25
+  postcss: 8.5.24
+  sharp: 0.35.3
+
+minimumReleaseAgeExclude:
+  - postcss@8.5.24

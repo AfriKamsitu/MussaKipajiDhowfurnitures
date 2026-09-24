@@ -1,0 +1,44 @@
+{
+  "title": "Paje Dhow Furniture — From the dhow to the home",
+  "status": "preproduction_no_video_rendered",
+  "durationSeconds": 50,
+  "frameRate": 24,
+  "frameCount": 1200,
+  "targetWidth": 3840,
+  "targetHeight": 2160,
+  "aspectRatio": "16:9",
+  "frameRangeConvention": "start inclusive, end exclusive",
+  "scenes": [
+    { "id": "origin", "startSeconds": 0, "endSeconds": 6, "startFrame": 0, "endFrame": 144 },
+    { "id": "workshop", "startSeconds": 6, "endSeconds": 14, "startFrame": 144, "endFrame": 336 },
+    { "id": "craftsmanship", "startSeconds": 14, "endSeconds": 27, "startFrame": 336, "endFrame": 648 },
+    { "id": "transformation", "startSeconds": 27, "endSeconds": 37, "startFrame": 648, "endFrame": 888 },
+    { "id": "lifestyle", "startSeconds": 37, "endSeconds": 46, "startFrame": 888, "endFrame": 1104 },
+    { "id": "signature", "startSeconds": 46, "endSeconds": 50, "startFrame": 1104, "endFrame": 1200 }
+  ],
+  "shots": [
+    { "id": "coast", "scene": "origin", "startFrame": 0, "endFrame": 96 },
+    { "id": "historic_timber", "scene": "origin", "startFrame": 96, "endFrame": 144 },
+    { "id": "select", "scene": "workshop", "startFrame": 144, "endFrame": 240 },
+    { "id": "carry", "scene": "workshop", "startFrame": 240, "endFrame": 336 },
+    { "id": "measure_mark", "scene": "craftsmanship", "startFrame": 336, "endFrame": 384 },
+    { "id": "cut", "scene": "craftsmanship", "startFrame": 384, "endFrame": 420 },
+    { "id": "plane", "scene": "craftsmanship", "startFrame": 420, "endFrame": 456 },
+    { "id": "sand", "scene": "craftsmanship", "startFrame": 456, "endFrame": 504 },
+    { "id": "join_leg", "scene": "craftsmanship", "startFrame": 504, "endFrame": 552 },
+    { "id": "fit_glass", "scene": "craftsmanship", "startFrame": 552, "endFrame": 600 },
+    { "id": "wine_compartments", "scene": "craftsmanship", "startFrame": 600, "endFrame": 648 },
+    { "id": "oil", "scene": "transformation", "startFrame": 648, "endFrame": 720 },
+    { "id": "completed_furniture", "scene": "transformation", "startFrame": 720, "endFrame": 816 },
+    { "id": "inspect", "scene": "transformation", "startFrame": 816, "endFrame": 888 },
+    { "id": "living", "scene": "lifestyle", "startFrame": 888, "endFrame": 972 },
+    { "id": "wine_rack", "scene": "lifestyle", "startFrame": 972, "endFrame": 1032 },
+    { "id": "dining_veranda", "scene": "lifestyle", "startFrame": 1032, "endFrame": 1104 },
+    { "id": "closing_hero", "scene": "signature", "startFrame": 1104, "endFrame": 1200 }
+  ],
+  "closingOverlays": [
+    { "text": "Paje Dhow Furniture", "startFrame": 1104, "endFrame": 1200, "fontFamily": "Alibaba Sans", "note": "Use existing logo asset instead when suitable." },
+    { "text": "Furniture with a seafaring soul.", "startFrame": 1109, "endFrame": 1200, "fontFamily": "Alibaba Sans" },
+    { "text": "Made on the Swahili Coast. Built to Endure.", "startFrame": 1133, "endFrame": 1200, "fontFamily": "Alibaba Sans" }
+  ]
+}

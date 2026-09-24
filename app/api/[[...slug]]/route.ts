@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getBackendUrl, proxyToBackend } from "@/lib/backend"
+import { NextRequest } from "next/server"
+import { proxyToBackend } from "@/lib/backend"
 
 export async function GET(request: NextRequest) {
   return handle(request)
@@ -22,22 +22,5 @@ export async function DELETE(request: NextRequest) {
 }
 
 async function handle(request: NextRequest) {
-  const pathname = request.nextUrl.pathname.replace(/^\/api\/?/, "")
-  const segments = pathname.split("/").filter(Boolean)
-
-  // Local health check: confirms the Next.js gateway process is up (does not require backend).
-  if (!segments.length || segments[0] === "health") {
-    return NextResponse.json({
-      success: true,
-      message: "API gateway is running",
-      data: {
-        status: "ok",
-        timestamp: new Date().toISOString(),
-        project: "Pajedhow Furnitures",
-        backendConfigured: Boolean(getBackendUrl()),
-      },
-    })
-  }
-
   return proxyToBackend(request)
 }

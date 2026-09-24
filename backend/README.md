@@ -1,8 +1,10 @@
 # Pajedhow Dhow Furnitures — Spring Boot Backend
 
-Production-ready REST API for the Pajedhow marketplace frontend. Built with **Spring Boot 3.3**, **Spring Security (JWT)**, **Spring Data JPA / Hibernate**, and **MySQL 8**.
+REST API for the Pajedhow marketplace frontend. Built with **Spring Boot 3.5**, **Spring Security (JWT)**, **Spring Data JPA / Hibernate**, and **MySQL 8**.
 
-It mirrors the frontend domain exactly: products, categories, suppliers, orders, customers, staff, coupons, banners, reviews, activity logs, and dashboard analytics — with role-based access control for the admin surface and a secure customer account area.
+It implements products, categories, suppliers, orders, customers, staff,
+coupons, banners, reviews, activity logs, settings, reporting, and dashboard
+analytics with role-based access control.
 
 ---
 
@@ -11,7 +13,7 @@ It mirrors the frontend domain exactly: products, categories, suppliers, orders,
 | Concern         | Choice                                   |
 |-----------------|------------------------------------------|
 | Language        | Java 17                                  |
-| Framework       | Spring Boot 3.3.5                         |
+| Framework       | Spring Boot 3.5.x                         |
 | Security        | Spring Security + JWT (jjwt 0.12)         |
 | Persistence     | Spring Data JPA / Hibernate              |
 | Database        | MySQL 8                                  |
@@ -22,7 +24,7 @@ It mirrors the frontend domain exactly: products, categories, suppliers, orders,
 
 ## Roles & access model
 
-Five system roles (mirroring the frontend):
+Two system roles:
 
 | Role          | Scope                                                                 |
 |---------------|-----------------------------------------------------------------------|
@@ -30,35 +32,37 @@ Five system roles (mirroring the frontend):
 | `BUYER`       | Own profile, addresses, orders, and review submissions                |
 
 Access is enforced two ways:
-- **URL rules** in `SecurityConfig` (`/api/admin/**` requires a staff role, `/api/account/**` requires login).
+- **URL rules** in `SecurityConfig` (`/api/admin/**` requires `ADMIN`,
+  `/api/account/**` requires `BUYER`).
 - **Method-level `@PreAuthorize`** on sensitive admin operations for fine-grained control.
 
-> On registration, emails starting with `admin@` are provisioned as `ADMIN`; everyone else becomes a `BUYER`. Staff accounts are otherwise created by an admin via `/api/admin/staff`.
+> Public registration always creates a `BUYER`. Administrator accounts are
+> created from secured environment configuration or by an existing
+> administrator.
 
 ---
 
 ## Getting started
 
 ### 1. Prerequisites
-- JDK 17+
+- JDK 17+ (JDK 21 LTS recommended)
 - Maven 3.9+
-- MySQL 8 running locally (the app auto-creates the `pajedhow` database)
+- MySQL 8 running locally
 
 ### 2. Configure
-Copy `.env.example` and adjust, or set the variables in your shell / IDE run config. Sensible defaults are baked into `application.yml`, so with a default local MySQL (`root`/`root`) you can run without any config.
+Copy `backend/.env.example` to `backend/.env` and supply the database password,
+a random Base64 JWT secret, and bootstrap administrator credentials.
 
 ### 3. Run
 ```bash
 cd backend
 mvn spring-boot:run
 ```
-The API starts on `http://localhost:8080`. On startup, `DataSeeder` ensures the ADMIN account exists and fills catalog data if empty:
-
-| Role  | Email                           | Password         |
-|-------|---------------------------------|------------------|
-| Admin | `Pajedhowfurniture@gmail.com`   | `Mussa@paje2026` |
-
-Buyers register themselves via `/api/auth/register` or social login. Disable seeding with `APP_SEED_ENABLED=false`.
+The API starts on `http://localhost:8080`. On startup, `DataSeeder` ensures the
+administrator configured by `ADMIN_EMAIL` and `ADMIN_PASSWORD` exists. Existing
+administrator passwords are not overwritten unless
+`ADMIN_SYNC_PASSWORD=true` is set deliberately. Buyers register themselves via
+`/api/auth/register` or social login.
 
 ### 4. Build a jar
 ```bash
@@ -85,8 +89,11 @@ java -jar target/pajedhow-backend-1.0.0.jar
 | POST   | `/api/auth/login`                 | Login                           |
 | POST   | `/api/auth/social`                | Buyer-only social login via Google/Facebook |
 | POST   | `/api/auth/refresh`               | Exchange refresh token          |
+| POST   | `/api/auth/password-reset/request`| Request a one-time reset link    |
+| POST   | `/api/auth/password-reset/confirm`| Reset password with the token    |
 | GET    | `/api/health`                     | Health check                    |
 | GET    | `/api/config/whatsapp`            | WhatsApp contact number         |
+| GET    | `/api/config/store`               | Public store settings           |
 | GET    | `/api/products`                   | List published products (paged, `q`, `category`) |
 | GET    | `/api/products/slug/{slug}`       | Product by slug                 |
 | GET    | `/api/products/{id}`              | Product by id                   |
@@ -150,11 +157,32 @@ backend/src/main/java/com/pajedhow/backend/
 
 ## Connecting the frontend
 
-Point the Next.js app at this API (e.g. `NEXT_PUBLIC_API_URL=http://localhost:8080`) and send the JWT as a `Bearer` token. CORS already allows `http://localhost:3000` and `:5173` — add your deployed origin via `APP_CORS_ORIGINS`.
+Set the frontend server-only `BACKEND_URL` to this API. Configure allowed
+browser origins with `APP_CORS_ALLOWED_ORIGINS`.
+
+## Production profile
+
+Run with `SPRING_PROFILES_ACTIVE=prod`. The production profile:
+
+- requires explicit database, public URL, and CORS settings;
+- uses graceful shutdown and forwarded proxy headers;
+- validates the schema (`ddl-auto=validate`) rather than mutating it; and
+- uses a bounded Hikari connection pool.
+
+Deploy reviewed schema changes before starting a production version. Use a
+TLS-enabled JDBC URL and configure `SPRING_MAIL_*` when password-reset and
+order email delivery are required. For an existing database created by the
+pre-audit application, review and apply
+`backend/db/migrations/V20260728__audit_schema_upgrade.sql` once before
+starting this version.
 
 ## Security notes
 - Passwords hashed with BCrypt.
-- Stateless JWT auth (no server sessions).
+- Stateless, versioned JWT auth; security-sensitive password changes revoke
+  previously issued access and refresh tokens.
 - All write operations validated with Bean Validation (`jakarta.validation`).
 - Centralised error responses via `GlobalExceptionHandler` (consistent JSON shape + proper HTTP status codes).
-- Set a strong `APP_JWT_SECRET` and `APP_SEED_ENABLED=false` in production.
+- Set a strong base64-encoded `JWT_SECRET`, `ADMIN_EMAIL`, and
+  `ADMIN_PASSWORD` in the secured production environment.
+- Rotate the bootstrap admin password after first sign-in and leave
+  `ADMIN_SYNC_PASSWORD=false`.

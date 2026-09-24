@@ -7,6 +7,7 @@ import { Check, Printer } from "lucide-react"
 import { AdminCard, AdminPageHeader, StatusBadge } from "@/components/admin/admin-ui"
 import { formatTZS, prettifyStatus } from "@/lib/admin-data"
 import { fetchApi } from "@/lib/api"
+import { useStoreSettings } from "@/components/store-settings-provider"
 
 type OrderDetail = {
   id: string
@@ -26,6 +27,7 @@ type OrderDetail = {
 }
 
 export default function OrderDetailsPage() {
+  const { currency } = useStoreSettings()
   const params = useParams<{ id: string }>()
   const id = params.id
   const [order, setOrder] = useState<OrderDetail | null>(null)
@@ -131,7 +133,7 @@ export default function OrderDetailsPage() {
               </div>
               <div className="flex justify-between gap-4 border-t border-border pt-3">
                 <dt className="text-muted-foreground">Total Amount</dt>
-                <dd className="text-right text-base font-bold text-foreground">{formatTZS(order.total)}</dd>
+                <dd className="text-right text-base font-bold text-foreground">{formatTZS(order.total, currency)}</dd>
               </div>
             </dl>
           </AdminCard>
@@ -168,10 +170,10 @@ export default function OrderDetailsPage() {
                           <span className="font-medium text-foreground">{it.name}</span>
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-muted-foreground">{formatTZS(it.price)}</td>
+                      <td className="px-5 py-3 text-muted-foreground">{formatTZS(it.price, currency)}</td>
                       <td className="px-5 py-3 text-muted-foreground">{it.qty}</td>
                       <td className="px-5 py-3 text-right font-medium text-foreground">
-                        {formatTZS(it.price * it.qty)}
+                        {formatTZS(it.price * it.qty, currency)}
                       </td>
                     </tr>
                   ))}
@@ -181,17 +183,17 @@ export default function OrderDetailsPage() {
             <div className="space-y-2 border-t border-border px-5 py-4 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium text-foreground">{formatTZS(order.subtotal)}</span>
+                <span className="font-medium text-foreground">{formatTZS(order.subtotal, currency)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Delivery Fee</span>
                 <span className="font-medium text-foreground">
-                  {order.delivery === 0 ? "TZS 0" : formatTZS(order.delivery)}
+                  {formatTZS(order.delivery, currency)}
                 </span>
               </div>
               <div className="flex justify-between border-t border-border pt-2">
                 <span className="font-semibold text-foreground">Total</span>
-                <span className="text-base font-bold text-foreground">{formatTZS(order.total)}</span>
+                <span className="text-base font-bold text-foreground">{formatTZS(order.total, currency)}</span>
               </div>
             </div>
           </AdminCard>

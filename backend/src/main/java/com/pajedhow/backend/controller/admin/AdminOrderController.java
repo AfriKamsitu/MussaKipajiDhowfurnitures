@@ -5,6 +5,8 @@ import com.pajedhow.backend.dto.OrderDtos.OrderResponse;
 import com.pajedhow.backend.dto.OrderDtos.UpdateStatusRequest;
 import com.pajedhow.backend.service.OrderService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -23,8 +25,8 @@ public class AdminOrderController {
     @GetMapping
     public Page<OrderResponse> list(
             @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return orderService.findAll(status,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
     }

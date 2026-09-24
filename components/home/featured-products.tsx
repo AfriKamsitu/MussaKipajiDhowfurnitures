@@ -21,12 +21,12 @@ export function FeaturedProducts() {
   return (
     <section>
       <SectionHeading
-        title="Featured Products"
-        subtitle="Handpicked pieces our customers love most"
-        actionLabel="View All"
+        title="Top picks for you"
+        subtitle="Fast access to popular furniture"
+        actionLabel="View more"
         actionHref="/shop"
       />
-      <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}

@@ -15,9 +15,12 @@ export type Product = {
   slug: string
   name: string
   category: string
+  shortDescription?: string
+  description?: string
   price: number
   oldPrice?: number
   image: string
+  images: string[]
   rating: number
   reviews: number
   isNew?: boolean
@@ -80,9 +83,12 @@ export function normalizeProduct(raw: Record<string, unknown>): Product {
     slug: str(raw.slug || raw.id),
     name: str(raw.name),
     category: str(raw.category),
+    shortDescription: raw.shortDescription != null ? str(raw.shortDescription) : undefined,
+    description: raw.description != null ? str(raw.description) : undefined,
     price: num(raw.price),
     oldPrice: raw.oldPrice != null ? num(raw.oldPrice) : undefined,
     image: str(raw.image, "/placeholder.svg"),
+    images: Array.isArray(raw.images) ? raw.images.map(String).filter(Boolean) : [str(raw.image, "/placeholder.svg")],
     rating: num(raw.rating),
     reviews: num(raw.reviews),
     isNew: Boolean(raw.isNew),
@@ -169,6 +175,13 @@ export function prettifyStatus(status: string) {
   return status
 }
 
-export function formatPrice(amount: number) {
-  return `TZS ${amount.toLocaleString("en-US")}`
+export function formatPrice(amount: number, currency = "TZS") {
+  const normalizedCurrency = ["TZS", "USD", "KES"].includes(currency) ? currency : "TZS"
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: normalizedCurrency,
+    currencyDisplay: "code",
+    minimumFractionDigits: normalizedCurrency === "USD" ? 2 : 0,
+    maximumFractionDigits: normalizedCurrency === "USD" ? 2 : 0,
+  }).format(Number.isFinite(amount) ? amount : 0)
 }

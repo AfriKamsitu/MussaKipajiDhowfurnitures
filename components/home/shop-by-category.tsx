@@ -22,29 +22,29 @@ export function ShopByCategory() {
   return (
     <section>
       <SectionHeading
-        title="Shop by Category"
-        subtitle="Find exactly what your space needs"
-        actionLabel="View All"
+        title="Browse categories"
+        subtitle="Popular furniture departments"
+        actionLabel="All categories"
         actionHref="/shop"
       />
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
+      <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-4 sm:overflow-visible sm:px-0 lg:grid-cols-8">
         {categories.map((cat) => (
           <Link
             key={cat.slug}
             href={`/shop?category=${cat.slug}`}
-            className="group flex flex-col items-center gap-3 rounded-xl border border-border bg-card p-4 text-center shadow-soft ring-1 ring-transparent transition-all duration-300 hover:-translate-y-1 hover:shadow-elevated hover:ring-accent/30"
+            className="group flex w-28 shrink-0 flex-col items-center gap-2 rounded-lg border border-border bg-card p-3 text-center shadow-soft ring-1 ring-transparent transition-all duration-300 hover:-translate-y-1 hover:shadow-elevated hover:ring-primary/30 sm:w-auto"
           >
-            <div className="relative size-16 overflow-hidden rounded-full bg-secondary ring-2 ring-border transition-all duration-300 group-hover:ring-accent/50">
+            <div className="relative size-14 overflow-hidden rounded-md bg-secondary ring-1 ring-border transition-all duration-300 group-hover:ring-primary/50">
               <Image
                 src={cat.image || "/placeholder.svg"}
                 alt={cat.name}
                 fill
-                sizes="64px"
+                sizes="56px"
                 className="object-cover transition-transform duration-500 ease-out group-hover:scale-110"
               />
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground transition-colors group-hover:text-accent">
+              <p className="line-clamp-1 text-xs font-semibold text-foreground transition-colors group-hover:text-primary sm:text-sm">
                 {cat.name}
               </p>
               <p className="text-xs text-muted-foreground">{cat.count} Items</p>

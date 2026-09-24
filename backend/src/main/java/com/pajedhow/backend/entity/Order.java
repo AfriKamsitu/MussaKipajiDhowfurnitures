@@ -12,7 +12,8 @@ import java.util.List;
 
 @Entity
 @Table(name = "orders", indexes = {
-        @Index(name = "idx_orders_number", columnList = "orderNumber", unique = true)
+        @Index(name = "idx_orders_number", columnList = "orderNumber", unique = true),
+        @Index(name = "idx_orders_customer_idempotency", columnList = "customer_id,idempotencyKey", unique = true)
 })
 @Getter
 @Setter
@@ -28,6 +29,13 @@ public class Order {
     /** Human-facing order code, e.g. "#FH12548". */
     @Column(nullable = false, unique = true, length = 20)
     private String orderNumber;
+
+    /**
+     * Client-generated checkout key. Retrying the same checkout returns the
+     * original order instead of decrementing stock twice.
+     */
+    @Column(length = 64)
+    private String idempotencyKey;
 
     /** Buyer account (nullable for guest / seller-created orders). */
     @ManyToOne(fetch = FetchType.LAZY)

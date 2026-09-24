@@ -2,19 +2,35 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
+import { ArrowLeft, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react"
 import { formatPrice } from "@/lib/data"
+import { useStoreSettings } from "@/components/store-settings-provider"
 import { useStore } from "@/components/store-provider"
+import { useAuth } from "@/components/auth-provider"
 
 export function CartView() {
+  const { currency } = useStoreSettings()
   const { cart, updateQuantity, removeFromCart, cartTotal } = useStore()
+  const { user } = useAuth()
 
-  const shipping = cartTotal > 0 && cartTotal < 200000 ? 20000 : 0
-  const total = cartTotal + shipping
+  if (user?.role === "admin") {
+    return (
+      <div className="surface-premium rounded-3xl p-10 text-center sm:p-14">
+        <h2 className="text-lg font-semibold text-foreground">Admin accounts cannot use buyer cart.</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Use the admin panel to manage products and orders.</p>
+        <Link
+          href="/admin"
+          className="mt-5 inline-flex rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-accent"
+        >
+          Go to Admin Panel
+        </Link>
+      </div>
+    )
+  }
 
   if (cart.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-lg border border-border bg-card py-20 text-center">
+      <div className="surface-premium flex flex-col items-center justify-center gap-4 rounded-3xl px-6 py-20 text-center">
         <span className="flex size-16 items-center justify-center rounded-full bg-secondary text-primary">
           <ShoppingBag className="size-7" />
         </span>
@@ -22,7 +38,7 @@ export function CartView() {
         <p className="text-sm text-muted-foreground">Looks like you haven&apos;t added anything yet.</p>
         <Link
           href="/shop"
-          className="mt-2 rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          className="mt-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-accent"
         >
           Continue Shopping
         </Link>
@@ -33,7 +49,7 @@ export function CartView() {
   return (
     <div className="grid gap-8 lg:grid-cols-3">
       <div className="lg:col-span-2">
-        <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
           {cart.map((item) => (
             <div
               key={item.product.id}
@@ -41,7 +57,7 @@ export function CartView() {
             >
               <Link
                 href={`/product/${item.product.id}`}
-                className="relative size-24 shrink-0 overflow-hidden rounded-md bg-secondary"
+                className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-secondary sm:size-28"
               >
                 <Image
                   src={item.product.image || "/placeholder.svg"}
@@ -65,7 +81,7 @@ export function CartView() {
                   <button
                     onClick={() => removeFromCart(item.product.id)}
                     aria-label="Remove item"
-                    className="text-muted-foreground transition-colors hover:text-destructive"
+                    className="grid size-10 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                   >
                     <Trash2 className="size-4" />
                   </button>
@@ -82,45 +98,46 @@ export function CartView() {
                     <span className="w-9 text-center text-sm font-medium">{item.quantity}</span>
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                      disabled={item.product.stock != null && item.quantity >= item.product.stock}
                       aria-label="Increase quantity"
-                      className="flex size-8 items-center justify-center hover:bg-secondary"
+                      className="flex size-8 items-center justify-center hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <Plus className="size-3.5" />
                     </button>
                   </div>
                   <span className="font-bold text-primary">
-                    {formatPrice(item.product.price * item.quantity)}
+                    {formatPrice(item.product.price * item.quantity, currency)}
                   </span>
                 </div>
               </div>
             </div>
           ))}
         </div>
-        <Link href="/shop" className="mt-4 inline-block text-sm font-medium text-accent hover:underline">
-          ← Continue Shopping
+        <Link href="/shop" className="mt-4 inline-flex min-h-6 items-center gap-2 text-sm font-medium text-accent hover:underline">
+          <ArrowLeft className="size-4" /> Continue shopping
         </Link>
       </div>
 
       {/* Summary */}
-      <div className="h-fit rounded-lg border border-border bg-card p-6">
+      <div className="surface-premium h-fit rounded-2xl p-6 lg:sticky lg:top-40">
         <h2 className="text-lg font-semibold text-foreground">Order Summary</h2>
         <dl className="mt-4 grid gap-3 text-sm">
           <div className="flex justify-between">
             <dt className="text-muted-foreground">Subtotal</dt>
-            <dd className="font-medium text-foreground">{formatPrice(cartTotal)}</dd>
+            <dd className="font-medium text-foreground">{formatPrice(cartTotal, currency)}</dd>
           </div>
           <div className="flex justify-between">
-            <dt className="text-muted-foreground">Shipping</dt>
-            <dd className="font-medium text-foreground">{shipping === 0 ? "Free" : formatPrice(shipping)}</dd>
+            <dt className="text-muted-foreground">Delivery</dt>
+            <dd className="text-right font-medium text-foreground">Confirmed on WhatsApp</dd>
           </div>
           <div className="mt-2 flex justify-between border-t border-border pt-3 text-base">
-            <dt className="font-semibold text-foreground">Total</dt>
-            <dd className="font-bold text-primary">{formatPrice(total)}</dd>
+            <dt className="font-semibold text-foreground">Products Total</dt>
+            <dd className="font-bold text-primary">{formatPrice(cartTotal, currency)}</dd>
           </div>
         </dl>
         <Link
           href="/checkout"
-          className="mt-5 flex w-full items-center justify-center rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+          className="mt-5 flex min-h-12 w-full items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-accent"
         >
           Proceed to Checkout
         </Link>

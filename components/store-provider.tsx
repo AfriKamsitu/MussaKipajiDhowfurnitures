@@ -1,10 +1,12 @@
 "use client"
 
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
 import type { Product } from "@/lib/data"
 
 const CART_KEY = "furnicraft.cart"
 const WISHLIST_KEY = "furnicraft.wishlist"
+const RECENTLY_VIEWED_KEY = "furnicraft.recently-viewed"
+const RECENTLY_VIEWED_LIMIT = 8
 
 function load<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback
@@ -22,9 +24,15 @@ export type CartItem = {
   color?: string
 }
 
+function cartLimit(product: Product) {
+  if (product.stock == null || !Number.isFinite(product.stock)) return Number.POSITIVE_INFINITY
+  return Math.max(0, Math.floor(product.stock))
+}
+
 type StoreContextValue = {
   cart: CartItem[]
   wishlist: Product[]
+  recentlyViewed: Product[]
   cartCount: number
   cartTotal: number
   wishlistCount: number
@@ -34,6 +42,7 @@ type StoreContextValue = {
   clearCart: () => void
   toggleWishlist: (product: Product) => void
   isInWishlist: (id: string) => boolean
+  recordRecentlyViewed: (product: Product) => void
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null)
@@ -41,12 +50,28 @@ const StoreContext = createContext<StoreContextValue | null>(null)
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartItem[]>([])
   const [wishlist, setWishlist] = useState<Product[]>([])
+  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([])
   const [hydrated, setHydrated] = useState(false)
 
   // Hydrate from localStorage after mount to avoid SSR mismatch.
   useEffect(() => {
-    setCart(load<CartItem[]>(CART_KEY, []))
+    setCart(
+      load<CartItem[]>(CART_KEY, [])
+        .map((item) => ({
+          ...item,
+          quantity: Math.min(
+            cartLimit(item.product),
+            Math.max(0, Math.floor(Number(item.quantity) || 0)),
+          ),
+        }))
+        .filter((item) => item.product?.id && item.quantity > 0),
+    )
     setWishlist(load<Product[]>(WISHLIST_KEY, []))
+    setRecentlyViewed(
+      load<Product[]>(RECENTLY_VIEWED_KEY, [])
+        .filter((product) => product?.id)
+        .slice(0, RECENTLY_VIEWED_LIMIT),
+    )
     setHydrated(true)
   }, [])
 
@@ -58,15 +83,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (hydrated) window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist))
   }, [wishlist, hydrated])
 
+  useEffect(() => {
+    if (hydrated) {
+      window.localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(recentlyViewed))
+    }
+  }, [recentlyViewed, hydrated])
+
   function addToCart(product: Product, quantity = 1, color?: string) {
     setCart((prev) => {
+      const requested = Math.max(1, Math.floor(quantity))
+      const limit = cartLimit(product)
+      if (limit === 0) return prev
       const existing = prev.find((item) => item.product.id === product.id)
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id ? { ...item, quantity: item.quantity + quantity, color: color ?? item.color } : item,
+          item.product.id === product.id
+            ? {
+                ...item,
+                product,
+                quantity: Math.min(limit, item.quantity + requested),
+                color: color ?? item.color,
+              }
+            : item,
         )
       }
-      return [...prev, { product, quantity, color }]
+      return [...prev, { product, quantity: Math.min(limit, requested), color }]
     })
   }
 
@@ -77,7 +118,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   function updateQuantity(id: string, quantity: number) {
     setCart((prev) =>
       prev
-        .map((item) => (item.product.id === id ? { ...item, quantity: Math.max(0, quantity) } : item))
+        .map((item) =>
+          item.product.id === id
+            ? {
+                ...item,
+                quantity: Math.min(cartLimit(item.product), Math.max(0, Math.floor(quantity))),
+              }
+            : item,
+        )
         .filter((item) => item.quantity > 0),
     )
   }
@@ -96,23 +144,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return wishlist.some((p) => p.id === id)
   }
 
-  const value = useMemo<StoreContextValue>(() => {
-    const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0)
-    const cartTotal = cart.reduce((sum, item) => sum + item.quantity * item.product.price, 0)
-    return {
-      cart,
-      wishlist,
-      cartCount,
-      cartTotal,
-      wishlistCount: wishlist.length,
-      addToCart,
-      removeFromCart,
-      updateQuantity,
-      clearCart,
-      toggleWishlist,
-      isInWishlist,
-    }
-  }, [cart, wishlist])
+  const recordRecentlyViewed = useCallback((product: Product) => {
+    setRecentlyViewed((current) => [
+      product,
+      ...current.filter((item) => item.id !== product.id),
+    ].slice(0, RECENTLY_VIEWED_LIMIT))
+  }, [])
+
+  const value: StoreContextValue = {
+    cart,
+    wishlist,
+    recentlyViewed,
+    cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
+    cartTotal: cart.reduce((sum, item) => sum + item.quantity * item.product.price, 0),
+    wishlistCount: wishlist.length,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    toggleWishlist,
+    isInWishlist,
+    recordRecentlyViewed,
+  }
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

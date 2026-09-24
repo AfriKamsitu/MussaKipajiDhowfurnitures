@@ -2,6 +2,11 @@ package com.pajedhow.backend.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -39,14 +44,26 @@ public final class MarketingDtos {
             String title,
             String location,
             String image,
+            String headline,
+            String description,
+            String ctaLabel,
+            BigDecimal price,
+            Integer discountPercentage,
+            Integer sortOrder,
             String status
     ) {}
 
     public record BannerRequest(
-            @NotBlank String title,
-            String location,
-            String image,
-            String status
+            @NotBlank @Size(max = 120) String title,
+            @NotBlank @Size(max = 64) String location,
+            @NotBlank @Size(max = 1024) String image,
+            @Size(max = 180) String headline,
+            @Size(max = 600) String description,
+            @Size(max = 64) String ctaLabel,
+            @PositiveOrZero BigDecimal price,
+            @Min(0) @Max(100) Integer discountPercentage,
+            @Min(0) @Max(10000) Integer sortOrder,
+            @Pattern(regexp = "(?i)ACTIVE|INACTIVE") String status
     ) {}
 
     // ---- Reviews ----
@@ -64,7 +81,7 @@ public final class MarketingDtos {
     public record ReviewRequest(
             @NotNull Long productId,
             @NotNull Integer rating,
-            String comment
+            @NotBlank @Size(max = 1000) String comment
     ) {}
 
     public record ReviewStatusRequest(

@@ -7,6 +7,8 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { useStoreSettings } from "@/components/store-settings-provider"
+import { formatPrice } from "@/lib/data"
 
 const revenueConfig = {
   revenue: { label: "Revenue", color: "var(--chart-1)" },
@@ -21,6 +23,7 @@ export function RevenueBarChart({
 }: {
   data?: Array<{ month: string; revenue: number }>
 }) {
+  const { currency } = useStoreSettings()
   if (!data.length) {
     return <p className="py-16 text-center text-sm text-muted-foreground">No revenue data yet</p>
   }
@@ -39,7 +42,7 @@ export function RevenueBarChart({
         />
         <ChartTooltip
           content={
-            <ChartTooltipContent formatter={(value) => `TZS ${Number(value).toLocaleString()}`} />
+            <ChartTooltipContent formatter={(value) => formatPrice(Number(value), currency)} />
           }
         />
         <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[6, 6, 0, 0]} isAnimationActive={false} />

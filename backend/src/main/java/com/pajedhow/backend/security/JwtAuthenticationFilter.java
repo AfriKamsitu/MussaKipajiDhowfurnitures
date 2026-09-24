@@ -36,10 +36,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         String token = authHeader.substring(BEARER_PREFIX.length());
         try {
-            String userId = jwtService.extractUserId(token);
-            if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                UserPrincipal principal = (UserPrincipal) userDetailsService.loadUserById(userId);
-                if (jwtService.isTokenValid(token, userId) && principal.isEnabled()) {
+            JwtService.TokenIdentity identity = jwtService.extractAccessTokenIdentity(token);
+            if (identity != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                UserPrincipal principal = (UserPrincipal) userDetailsService.loadUserById(identity.userId());
+                if (principal.isEnabled()
+                        && principal.getUser().getTokenVersion() == identity.tokenVersion()) {
                     var authentication = new UsernamePasswordAuthenticationToken(
                             principal, null, principal.getAuthorities());
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

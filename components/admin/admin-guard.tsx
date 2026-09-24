@@ -2,18 +2,22 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Loader2, ShieldAlert } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
-    if (!loading && !user) router.replace("/login?redirect=/admin")
+    if (!loading && !user) {
+      const redirect = encodeURIComponent(pathname || "/admin")
+      router.replace(`/login?redirect=${redirect}`)
+    }
     // Buyers trying to open /admin stay on a denied screen (handled below).
-  }, [loading, user, router])
+  }, [loading, pathname, user, router])
 
   if (loading || !user) {
     return (

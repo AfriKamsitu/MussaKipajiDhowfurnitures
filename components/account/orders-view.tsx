@@ -1,34 +1,60 @@
 "use client"
 
+import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Package } from "lucide-react"
-import { useAuth } from "@/components/auth-provider"
+import { MessageCircle, Package, Search, Truck } from "lucide-react"
+import { useAuth, type Order } from "@/components/auth-provider"
 import { formatPrice } from "@/lib/data"
+import { useStoreSettings } from "@/components/store-settings-provider"
 import { cn } from "@/lib/utils"
+import { openWhatsApp } from "@/lib/whatsapp"
+
+const statuses = ["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"] as const
 
 const statusStyles: Record<string, string> = {
+  Pending: "bg-secondary text-muted-foreground",
   Processing: "bg-accent/15 text-accent",
   Shipped: "bg-chart-3/15 text-chart-3",
   Delivered: "bg-primary/15 text-primary",
   Cancelled: "bg-destructive/15 text-destructive",
 }
 
+const progressSteps: Order["status"][] = ["Pending", "Processing", "Shipped", "Delivered"]
+
+function progressIndex(status: Order["status"]) {
+  if (status === "Cancelled") return -1
+  return Math.max(0, progressSteps.indexOf(status))
+}
+
 export function OrdersView() {
+  const { currency } = useStoreSettings()
   const { user } = useAuth()
+  const [status, setStatus] = useState<(typeof statuses)[number]>("All")
+  const [query, setQuery] = useState("")
   if (!user) return null
+
+  const q = query.trim().toLowerCase()
+  const filtered = user.orders.filter((order) => {
+    const matchesStatus = status === "All" || order.status === status
+    const matchesQuery =
+      !q ||
+      order.id.toLowerCase().includes(q) ||
+      order.items.some((item) => item.name.toLowerCase().includes(q))
+    return matchesStatus && matchesQuery
+  })
 
   if (user.orders.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 rounded-xl border border-border bg-card py-20 text-center shadow-soft">
-        <span className="flex size-16 items-center justify-center rounded-full bg-secondary text-accent">
+      <div className="surface-premium flex flex-col items-center justify-center gap-4 rounded-3xl px-6 py-20 text-center">
+        <span className="flex size-16 items-center justify-center rounded-full bg-secondary text-primary">
           <Package className="size-7" />
         </span>
-        <h2 className="text-xl font-semibold text-foreground">No orders yet</h2>
+        <h2 className="text-2xl font-black text-foreground">No orders yet</h2>
         <p className="text-sm text-muted-foreground">When you place an order, it will appear here.</p>
         <Link
           href="/shop"
-          className="mt-2 rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          className="mt-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-accent"
         >
           Browse Products
         </Link>
@@ -38,37 +64,112 @@ export function OrdersView() {
 
   return (
     <div className="space-y-4">
-      {user.orders.map((order) => (
-        <div key={order.id} className="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/40 px-5 py-3">
-            <div>
-              <p className="text-sm font-semibold text-foreground">Order #{order.id}</p>
-              <p className="text-xs text-muted-foreground">Placed {new Date(order.date).toLocaleDateString()}</p>
-            </div>
-            <span className={cn("rounded-full px-3 py-1 text-xs font-medium", statusStyles[order.status])}>
-              {order.status}
-            </span>
+      <div className="surface-premium rounded-2xl p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="relative max-w-lg flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search order number or product..."
+              className="w-full rounded-md border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none transition-colors focus:border-primary"
+            />
           </div>
-          <ul className="divide-y divide-border">
-            {order.items.map((item, i) => (
-              <li key={i} className="flex items-center gap-4 px-5 py-4">
-                <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-secondary">
-                  <Image src={item.image || "/placeholder.svg"} alt={item.name} fill sizes="64px" className="object-cover" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
-                  <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                </div>
-                <p className="text-sm font-semibold text-foreground">{formatPrice(item.price * item.quantity)}</p>
-              </li>
+          <div className="scrollbar-none flex gap-2 overflow-x-auto">
+            {statuses.map((item) => (
+              <button
+                key={item}
+                onClick={() => setStatus(item)}
+                className={cn(
+                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-colors",
+                  status === item
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border bg-card text-foreground hover:border-primary/40",
+                )}
+              >
+                {item}
+              </button>
             ))}
-          </ul>
-          <div className="flex items-center justify-between border-t border-border px-5 py-3">
-            <p className="text-sm text-muted-foreground">Total</p>
-            <p className="text-base font-bold text-foreground">{formatPrice(order.total)}</p>
           </div>
         </div>
-      ))}
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="surface-premium rounded-2xl p-12 text-center text-sm text-muted-foreground">
+          No orders match your filters.
+        </div>
+      ) : (
+        filtered.map((order) => {
+          const currentStep = progressIndex(order.status)
+          return (
+            <div key={order.id} className="surface-premium overflow-hidden rounded-2xl transition-shadow hover:shadow-premium">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/40 px-5 py-4">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Order #{order.id}</p>
+                  <p className="text-xs text-muted-foreground">Placed {new Date(order.date).toLocaleDateString()}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={cn("rounded-full px-3 py-1 text-xs font-medium", statusStyles[order.status])}>
+                    {order.status}
+                  </span>
+                  <button
+                    onClick={() => openWhatsApp(`Hello Paje Dhow Furniture, I need help with order #${order.id}.`)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:border-primary/40"
+                  >
+                    <MessageCircle className="size-3.5" />
+                    Help
+                  </button>
+                </div>
+              </div>
+
+              <div className="border-b border-border px-5 py-4">
+                {order.status === "Cancelled" ? (
+                  <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+                    This order was cancelled.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2">
+                    {progressSteps.map((step, index) => (
+                      <div key={step} className="min-w-0">
+                        <div className={cn("h-1.5 rounded-full", index <= currentStep ? "bg-primary" : "bg-border")} />
+                        <p className={cn("mt-2 truncate text-[11px] font-semibold", index <= currentStep ? "text-primary" : "text-muted-foreground")}>
+                          {step}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <ul className="divide-y divide-border">
+                {order.items.map((item, index) => (
+                  <li key={`${item.name}-${index}`} className="flex items-center gap-4 px-5 py-4">
+                    <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-secondary">
+                      <Image src={item.image || "/placeholder.svg"} alt={item.name} fill sizes="64px" className="object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
+                      <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">{formatPrice(item.price * item.quantity, currency)}</p>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Truck className="size-4 text-primary" />
+                  Delivery details update as the order progresses.
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-muted-foreground">Total</p>
+                  <p className="text-base font-bold text-foreground">{formatPrice(order.total, currency)}</p>
+                </div>
+              </div>
+            </div>
+          )
+        })
+      )}
     </div>
   )
 }

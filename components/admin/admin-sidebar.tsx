@@ -62,19 +62,19 @@ function NavLink({
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-[background-color,color,transform,box-shadow] duration-200",
         active
-          ? "bg-primary text-primary-foreground shadow-sm"
-          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          ? "translate-x-0.5 bg-primary text-primary-foreground shadow-[0_10px_26px_-14px_rgba(93,98,72,0.55)] hover:bg-primary/92"
+          : "text-sidebar-foreground hover:translate-x-1 hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground",
       )}
     >
-      <Icon className="size-[18px]" />
+      <Icon className="size-[18px] transition-transform duration-200 group-hover:scale-110" />
       <span className="flex-1">{item.label}</span>
       {badge > 0 && (
         <span
           className={cn(
             "flex min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold",
-            active ? "bg-primary-foreground/20 text-primary-foreground" : "bg-accent text-accent-foreground",
+            active ? "bg-white/20 text-white" : "bg-accent text-accent-foreground",
           )}
         >
           {badge}
@@ -115,29 +115,31 @@ export function AdminSidebar({
     <>
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-foreground/40 lg:hidden"
+          className="fixed inset-0 z-40 bg-foreground/35 backdrop-blur-sm lg:hidden"
           onClick={onClose}
           aria-hidden
         />
       )}
       <aside
+        id="admin-sidebar"
+        aria-label="Admin navigation"
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-sidebar-border bg-sidebar transition-transform lg:static lg:z-auto lg:translate-x-0",
+          "admin-glass fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border/80 transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
         {/* Brand */}
         <div className="flex items-center justify-between px-5 py-5">
-          <Link href="/admin" className="flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-primary">
-              <Image src="/paje-dhow-logo.png" alt="Paje Dhow Furniture logo" width={36} height={36} className="size-7 object-contain" />
+          <Link href="/admin" className="group flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-lg bg-primary shadow-[0_9px_24px_-12px_rgb(117_75_51_/_0.75)] transition-transform duration-300 group-hover:-rotate-2 group-hover:scale-105">
+              <Image src="/paje-dhow-furniture-logo.jpeg" alt="Paje Dhow Furniture logo" width={36} height={36} className="size-7 rounded-full object-cover transition-transform duration-500 group-hover:rotate-2 group-hover:scale-110" />
             </span>
             <span className="leading-tight">
               <span className="block text-base font-bold uppercase tracking-wide text-foreground">Paje Dhow</span>
               <span className="block text-[11px] text-muted-foreground">Admin Panel</span>
             </span>
           </Link>
-          <button onClick={onClose} className="text-muted-foreground lg:hidden" aria-label="Close menu">
+          <button type="button" data-admin-drawer-close onClick={onClose} className="grid size-11 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary lg:hidden" aria-label="Close admin menu">
             <X className="size-5" />
           </button>
         </div>
@@ -164,7 +166,7 @@ export function AdminSidebar({
         {/* Admin profile */}
         <div className="relative border-t border-sidebar-border p-3">
           {menuOpen && (
-            <div className="absolute inset-x-3 bottom-full mb-1 overflow-hidden rounded-lg border border-border bg-popover shadow-elevated">
+            <div className="admin-glass admin-enter absolute inset-x-3 bottom-full mb-1 overflow-hidden rounded-xl border border-white/60 shadow-elevated">
               <Link
                 href="/"
                 onClick={onClose}
@@ -184,9 +186,9 @@ export function AdminSidebar({
           )}
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-sidebar-accent"
+            className="group flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-[background-color,transform] hover:translate-x-0.5 hover:bg-sidebar-accent/80"
           >
-            <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              <span className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary transition-transform duration-200 group-hover:scale-105">
               {initials || "AU"}
             </span>
             <span className="flex-1 leading-tight">

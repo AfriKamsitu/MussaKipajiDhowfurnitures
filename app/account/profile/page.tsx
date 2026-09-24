@@ -3,7 +3,7 @@ import { AccountShell } from "@/components/account/account-shell"
 import { ProfileView } from "@/components/account/profile-view"
 
 export const metadata: Metadata = {
-  title: "Profile — pajedhowfurnitures",
+  title: "Profile",
 }
 
 export default function ProfilePage() {

@@ -2,6 +2,7 @@ package com.pajedhow.backend.repository;
 
 import com.pajedhow.backend.entity.Role;
 import com.pajedhow.backend.entity.User;
+import com.pajedhow.backend.entity.enums.Enums.AccountStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -23,4 +24,6 @@ public interface UserRepository extends JpaRepository<User, String> {
     List<User> findAllCustomers();
 
     long countByRole(Role role);
+
+    long countByRoleAndStatus(Role role, AccountStatus status);
 }

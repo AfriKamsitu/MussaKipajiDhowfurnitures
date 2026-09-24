@@ -3,7 +3,7 @@ import { AdminShell } from "@/components/admin/admin-shell"
 import { AdminGuard } from "@/components/admin/admin-guard"
 
 export const metadata: Metadata = {
-  title: "pajedhowfurnitures — Admin Panel",
+  title: "Admin",
   description: "Manage products, orders, customers and store settings.",
 }
 

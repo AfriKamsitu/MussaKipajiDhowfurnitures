@@ -13,6 +13,7 @@ import com.pajedhow.backend.exception.BadRequestException;
 import com.pajedhow.backend.exception.ResourceNotFoundException;
 import com.pajedhow.backend.mapper.Mappers;
 import com.pajedhow.backend.repository.OrderRepository;
+import com.pajedhow.backend.repository.ReviewRepository;
 import com.pajedhow.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -28,6 +30,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final OrderRepository orderRepository;
+    private final ReviewRepository reviewRepository;
     private final PasswordEncoder passwordEncoder;
     private final ActivityLogService activityLog;
 
@@ -43,14 +46,19 @@ public class UserService {
         User user = get(userId);
         if (req.name() != null && !req.name().isBlank()) user.setName(req.name());
         if (req.email() != null && !req.email().isBlank()
-                && !req.email().equalsIgnoreCase(user.getEmail())) {
-            if (userRepository.existsByEmailIgnoreCase(req.email())) {
+                && !normalizeEmail(req.email()).equalsIgnoreCase(user.getEmail())) {
+            String email = normalizeEmail(req.email());
+            if (userRepository.existsByEmailIgnoreCase(email)) {
                 throw new BadRequestException("Email already in use");
             }
-            user.setEmail(req.email().toLowerCase());
+            user.setEmail(email);
         }
         if (req.phone() != null) user.setPhone(req.phone());
         if (req.avatar() != null) user.setAvatar(req.avatar());
+        if (req.marketingOptIn() != null) {
+            user.setMarketingOptIn(req.marketingOptIn());
+            user.setMarketingOptInAt(req.marketingOptIn() ? Instant.now() : null);
+        }
         return Mappers.toUser(userRepository.save(user));
     }
 
@@ -122,8 +130,8 @@ public class UserService {
         if (userRepository.existsByEmailIgnoreCase(req.email())) {
             throw new BadRequestException("Email already in use");
         }
-        if (req.password() == null || req.password().length() < 6) {
-            throw new BadRequestException("Password must be at least 6 characters");
+        if (req.password() == null || req.password().length() < 8) {
+            throw new BadRequestException("Password must be at least 8 characters");
         }
         Role role = parseRole(req.role());
         if (role != Role.ADMIN) {
@@ -131,7 +139,7 @@ public class UserService {
         }
         User user = User.builder()
                 .name(req.name())
-                .email(req.email().toLowerCase())
+                .email(normalizeEmail(req.email()))
                 .password(passwordEncoder.encode(req.password()))
                 .role(role)
                 .status(parseStatus(req.status()))
@@ -142,33 +150,41 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse updateStaff(String id, StaffRequest req) {
+    public UserResponse updateStaff(String id, StaffRequest req, String actorId) {
         User user = get(id);
         user.setName(req.name());
-        if (!req.email().equalsIgnoreCase(user.getEmail())) {
-            if (userRepository.existsByEmailIgnoreCase(req.email())) {
+        String customerEmail = normalizeEmail(req.email());
+        if (!customerEmail.equalsIgnoreCase(user.getEmail())) {
+            if (userRepository.existsByEmailIgnoreCase(customerEmail)) {
                 throw new BadRequestException("Email already in use");
             }
-            user.setEmail(req.email().toLowerCase());
+            user.setEmail(customerEmail);
         }
         Role role = parseRole(req.role());
         if (role != Role.ADMIN) {
             throw new BadRequestException("Staff accounts must use role ADMIN");
         }
         user.setRole(role);
-        user.setStatus(parseStatus(req.status()));
+        AccountStatus nextStatus = parseStatus(req.status());
+        guardAdministratorContinuity(user, actorId, nextStatus, false);
+        user.setStatus(nextStatus);
         if (req.password() != null && !req.password().isBlank()) {
-            if (req.password().length() < 6) {
-                throw new BadRequestException("Password must be at least 6 characters");
+            if (req.password().length() < 8) {
+                throw new BadRequestException("Password must be at least 8 characters");
             }
             user.setPassword(passwordEncoder.encode(req.password()));
+            user.setTokenVersion(user.getTokenVersion() + 1);
         }
         return Mappers.toUser(userRepository.save(user));
     }
 
     @Transactional
-    public void deleteUser(String id) {
+    public void deleteStaff(String id, String actorId) {
         User user = get(id);
+        if (user.getRole() != Role.ADMIN) {
+            throw new BadRequestException("Only administrator accounts can be deleted here");
+        }
+        guardAdministratorContinuity(user, actorId, AccountStatus.INACTIVE, true);
         userRepository.delete(user);
         activityLog.record("Admin", "deleted account", user.getEmail());
     }
@@ -185,13 +201,82 @@ public class UserService {
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             return new CustomerSummary(
                     c.getId(), c.getName(), c.getEmail(), c.getPhone(),
-                    orders.size(), spent, c.getStatus().name(), c.getCreatedAt());
+                    orders.size(), spent, c.getStatus().name(), c.getCreatedAt(),
+                    c.isMarketingOptIn(), c.getMarketingOptInAt());
         }).toList();
+    }
+
+    @Transactional
+    public UserResponse createCustomer(CustomerRequest req) {
+        if (userRepository.existsByEmailIgnoreCase(req.email())) {
+            throw new BadRequestException("Email already in use");
+        }
+        if (req.password() == null || req.password().length() < 8) {
+            throw new BadRequestException("Password must be at least 8 characters");
+        }
+        User user = User.builder()
+                .name(req.name())
+                .email(normalizeEmail(req.email()))
+                .phone(req.phone())
+                .password(passwordEncoder.encode(req.password()))
+                .role(Role.BUYER)
+                .status(parseStatus(req.status()))
+                .build();
+        User saved = userRepository.save(user);
+        activityLog.record("Admin", "created customer account", saved.getEmail());
+        return Mappers.toUser(saved);
+    }
+
+    @Transactional
+    public UserResponse updateCustomer(String id, CustomerRequest req) {
+        User user = get(id);
+        if (user.getRole() != Role.BUYER) {
+            throw new BadRequestException("Only customer accounts can be updated here");
+        }
+        user.setName(req.name());
+        String staffEmail = normalizeEmail(req.email());
+        if (!staffEmail.equalsIgnoreCase(user.getEmail())) {
+            if (userRepository.existsByEmailIgnoreCase(staffEmail)) {
+                throw new BadRequestException("Email already in use");
+            }
+            user.setEmail(staffEmail);
+        }
+        user.setPhone(req.phone());
+        user.setStatus(parseStatus(req.status()));
+        if (req.password() != null && !req.password().isBlank()) {
+            if (req.password().length() < 8) {
+                throw new BadRequestException("Password must be at least 8 characters");
+            }
+            user.setPassword(passwordEncoder.encode(req.password()));
+            user.setTokenVersion(user.getTokenVersion() + 1);
+        }
+        return Mappers.toUser(userRepository.save(user));
+    }
+
+    @Transactional
+    public void deleteCustomer(String id) {
+        User user = get(id);
+        if (user.getRole() != Role.BUYER) {
+            throw new BadRequestException("Only customer accounts can be deleted here");
+        }
+        if (orderRepository.existsByCustomerId(id)) {
+            throw new BadRequestException(
+                    "Customers with order history cannot be deleted. Set the account to inactive instead.");
+        }
+        if (reviewRepository.existsByUserId(id)) {
+            throw new BadRequestException(
+                    "Customers with review history cannot be deleted. Set the account to inactive instead.");
+        }
+        userRepository.delete(user);
+        activityLog.record("Admin", "deleted customer account", user.getEmail());
     }
 
     @Transactional
     public UserResponse setStatus(String id, String status) {
         User user = get(id);
+        if (user.getRole() != Role.BUYER) {
+            throw new BadRequestException("Only customer accounts can be updated here");
+        }
         user.setStatus(parseStatus(status));
         return Mappers.toUser(userRepository.save(user));
     }
@@ -215,6 +300,25 @@ public class UserService {
             return AccountStatus.valueOf(value.trim().toUpperCase());
         } catch (IllegalArgumentException ex) {
             throw new BadRequestException("Invalid status: " + value);
+        }
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
+    }
+
+    private void guardAdministratorContinuity(
+            User user,
+            String actorId,
+            AccountStatus nextStatus,
+            boolean deleting) {
+        if (user.getId().equals(actorId) && (deleting || nextStatus != AccountStatus.ACTIVE)) {
+            throw new BadRequestException("You cannot delete or deactivate your own administrator account.");
+        }
+        if ((deleting || nextStatus != AccountStatus.ACTIVE)
+                && user.getStatus() == AccountStatus.ACTIVE
+                && userRepository.countByRoleAndStatus(Role.ADMIN, AccountStatus.ACTIVE) <= 1) {
+            throw new BadRequestException("At least one active administrator account is required.");
         }
     }
 }

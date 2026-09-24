@@ -9,7 +9,14 @@ import {
   useState,
   type ReactNode,
 } from "react"
-import { fetchApi, getAuthToken, setAuthToken } from "@/lib/api"
+import {
+  ApiError,
+  AUTH_SESSION_EXPIRED_EVENT,
+  fetchApi,
+  getAuthToken,
+  refreshAuthToken,
+  setAuthToken,
+} from "@/lib/api"
 
 export type Address = {
   id: string
@@ -40,6 +47,7 @@ export type User = {
   avatar?: string
   role: Role
   createdAt: string
+  marketingOptIn: boolean
   addresses: Address[]
   orders: Order[]
 }
@@ -47,22 +55,24 @@ export type User = {
 type AuthContextValue = {
   user: User | null
   loading: boolean
-  signUp: (data: { name: string; email: string; password: string }) => Promise<{ error?: string; role?: Role }>
-  signIn: (data: { email: string; password: string }) => Promise<{ error?: string; role?: Role }>
+  signUp: (data: { name: string; email: string; password: string; marketingOptIn: boolean }) => Promise<{ error?: string; role?: Role }>
+  signIn: (data: { email: string; password: string; marketingOptIn?: boolean }) => Promise<{ error?: string; role?: Role }>
   signInWithProvider: (
     provider: "google" | "facebook",
     token?: string,
+    marketingOptIn?: boolean,
   ) => Promise<{ error?: string; role?: Role; redirected?: boolean }>
   signOut: () => void
-  updateProfile: (data: Partial<Pick<User, "name" | "email" | "phone" | "avatar">>) => void
-  addAddress: (address: Omit<Address, "id">) => void
-  updateAddress: (id: string, address: Partial<Address>) => void
-  removeAddress: (id: string) => void
+  updateProfile: (data: Partial<Pick<User, "name" | "email" | "phone" | "avatar" | "marketingOptIn">>) => Promise<void>
+  addAddress: (address: Omit<Address, "id">) => Promise<void>
+  updateAddress: (id: string, address: Partial<Address>) => Promise<void>
+  removeAddress: (id: string) => Promise<void>
   addOrder: (order: Order) => void
   refreshOrders: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+const USER_KEY = "pajedhow.user"
 
 type BackendUser = {
   id?: string
@@ -72,6 +82,7 @@ type BackendUser = {
   avatar?: string
   role?: string
   createdAt?: string
+  marketingOptIn?: boolean
   addresses?: Array<{
     id?: number | string
     label?: string
@@ -120,8 +131,32 @@ function toUser(raw: BackendUser, orders: Order[] = []): User {
     avatar: raw.avatar,
     role: normalizeRole(raw.role),
     createdAt: String(raw.createdAt ?? new Date().toISOString()),
+    marketingOptIn: Boolean(raw.marketingOptIn),
     addresses: Array.isArray(raw.addresses) ? raw.addresses.map(mapAddress) : [],
     orders,
+  }
+}
+
+function getStoredUser(): User | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = window.localStorage.getItem(USER_KEY)
+    return raw ? (JSON.parse(raw) as User) : null
+  } catch {
+    return null
+  }
+}
+
+function setStoredUser(user: User | null) {
+  if (typeof window === "undefined") return
+  try {
+    if (user) {
+      window.localStorage.setItem(USER_KEY, JSON.stringify(user))
+    } else {
+      window.localStorage.removeItem(USER_KEY)
+    }
+  } catch {
+    /* ignore localStorage failures */
   }
 }
 
@@ -150,29 +185,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   const loadOrders = useCallback(async (): Promise<Order[]> => {
-    try {
-      const orders = await fetchApi<Record<string, unknown>[]>("/api/account/orders")
-      return Array.isArray(orders) ? orders.map(mapOrder) : []
-    } catch {
-      return []
+    const orders = await fetchApi<Record<string, unknown>[]>("/api/account/orders")
+    return Array.isArray(orders) ? orders.map(mapOrder) : []
+  }, [])
+
+  useEffect(() => {
+    const clearSession = () => {
+      setAuthToken(null)
+      setStoredUser(null)
+      setUser(null)
     }
+    window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, clearSession)
+    return () => window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, clearSession)
   }, [])
 
   useEffect(() => {
     const token = getAuthToken()
-    if (!token) {
+    const cachedUser = getStoredUser()
+
+    if (!token && !cachedUser) {
       setLoading(false)
       return
     }
 
+    if (cachedUser) {
+      setUser(cachedUser)
+    }
+
     ;(async () => {
       try {
+        if (!token && !(await refreshAuthToken())) {
+          return
+        }
         const me = await fetchApi<BackendUser>("/api/auth/me")
-        const orders = await loadOrders()
-        setUser(toUser(me, orders))
-      } catch {
-        setAuthToken(null)
-        setUser(null)
+        const orders = await loadOrders().catch(() => cachedUser?.orders ?? [])
+        const next = toUser(me, orders)
+        setUser(next)
+        setStoredUser(next)
+      } catch (error) {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          setAuthToken(null)
+          setStoredUser(null)
+          setUser(null)
+          return
+        }
+        if (!cachedUser) {
+          setUser(null)
+        }
       } finally {
         setLoading(false)
       }
@@ -183,20 +242,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (payload: AuthResponse) => {
       if (payload.accessToken) setAuthToken(payload.accessToken)
       if (!payload.user) throw new Error("Authentication response missing user.")
-      const orders = await loadOrders()
+      const orders = await loadOrders().catch(() => [])
       const next = toUser(payload.user, orders)
       setUser(next)
+      setStoredUser(next)
       return next.role
     },
     [loadOrders],
   )
 
   const signUp = useCallback<AuthContextValue["signUp"]>(
-    async ({ name, email, password }) => {
+    async ({ name, email, password, marketingOptIn }) => {
       try {
         const payload = await fetchApi<AuthResponse>("/api/auth/register", {
           method: "POST",
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ name, email, password, marketingOptIn }),
         })
         const role = await applyAuthResponse(payload)
         return { role }
@@ -208,11 +268,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signIn = useCallback<AuthContextValue["signIn"]>(
-    async ({ email, password }) => {
+    async ({ email, password, marketingOptIn }) => {
       try {
         const payload = await fetchApi<AuthResponse>("/api/auth/login", {
           method: "POST",
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email, password, marketingOptIn }),
         })
         const role = await applyAuthResponse(payload)
         return { role }
@@ -224,7 +284,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const signInWithProvider = useCallback<AuthContextValue["signInWithProvider"]>(
-    async (provider, token) => {
+    async (provider, token, marketingOptIn) => {
       try {
         let providerToken = token
         if (!providerToken) {
@@ -234,7 +294,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const payload = await fetchApi<AuthResponse>("/api/auth/social", {
           method: "POST",
-          body: JSON.stringify({ provider, token: providerToken }),
+          body: JSON.stringify({ provider, token: providerToken, marketingOptIn }),
         })
         const role = await applyAuthResponse(payload)
         // Social accounts are always BUYER on the backend.
@@ -248,27 +308,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(() => {
     setAuthToken(null)
+    setStoredUser(null)
     setUser(null)
+    fetch("/api/auth/logout", { method: "POST", cache: "no-store" }).catch(() => {})
   }, [])
 
   const updateProfile = useCallback<AuthContextValue["updateProfile"]>(
-    (data) => {
-      if (!user) return
-      const next = { ...user, ...data }
-      setUser(next)
-      fetchApi("/api/account/profile", {
+    async (data) => {
+      if (!user) throw new Error("You must be signed in to update your profile.")
+      const updated = await fetchApi<BackendUser>("/api/account/profile", {
         method: "PUT",
         body: JSON.stringify(data),
-      }).catch(() => {})
+      })
+      const next = toUser(updated, user.orders)
+      setUser(next)
+      setStoredUser(next)
     },
     [user],
   )
 
   const addAddress = useCallback<AuthContextValue["addAddress"]>(
     async (address) => {
-      if (!user) return
-      try {
-        const created = await fetchApi<{
+      if (!user) throw new Error("You must be signed in to add an address.")
+      const created = await fetchApi<{
           id: number | string
           label?: string
           fullName?: string
@@ -277,56 +339,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           city?: string
           region?: string
           isDefault?: boolean
-        }>("/api/account/addresses", {
-          method: "POST",
-          body: JSON.stringify(address),
-        })
-        const mapped = mapAddress(created)
-        const addresses = mapped.isDefault
-          ? [...user.addresses.map((a) => ({ ...a, isDefault: false })), mapped]
-          : [...user.addresses, mapped]
-        setUser({ ...user, addresses })
-      } catch {
-        /* leave UI unchanged on failure */
-      }
+      }>("/api/account/addresses", {
+        method: "POST",
+        body: JSON.stringify(address),
+      })
+      const mapped = mapAddress(created)
+      const addresses = mapped.isDefault
+        ? [...user.addresses.map((a) => ({ ...a, isDefault: false })), mapped]
+        : [...user.addresses, mapped]
+      const next = { ...user, addresses }
+      setUser(next)
+      setStoredUser(next)
     },
     [user],
   )
 
   const updateAddress = useCallback<AuthContextValue["updateAddress"]>(
     async (id, data) => {
-      if (!user) return
+      if (!user) throw new Error("You must be signed in to update an address.")
       const current = user.addresses.find((a) => a.id === id)
-      if (!current) return
+      if (!current) throw new Error("Address not found.")
       const body = { ...current, ...data }
-      try {
-        const updated = await fetchApi<typeof body>(`/api/account/addresses/${id}`, {
-          method: "PUT",
-          body: JSON.stringify(body),
-        })
-        let addresses = user.addresses.map((a) =>
-          a.id === id ? mapAddress(updated as Parameters<typeof mapAddress>[0]) : a,
-        )
-        if (data.isDefault) {
-          addresses = addresses.map((a) => (a.id === id ? a : { ...a, isDefault: false }))
-        }
-        setUser({ ...user, addresses })
-      } catch {
-        /* ignore */
+      const updated = await fetchApi<typeof body>(`/api/account/addresses/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      })
+      let addresses = user.addresses.map((a) =>
+        a.id === id ? mapAddress(updated as Parameters<typeof mapAddress>[0]) : a,
+      )
+      if (data.isDefault) {
+        addresses = addresses.map((a) => (a.id === id ? a : { ...a, isDefault: false }))
       }
+      const next = { ...user, addresses }
+      setUser(next)
+      setStoredUser(next)
     },
     [user],
   )
 
   const removeAddress = useCallback<AuthContextValue["removeAddress"]>(
     async (id) => {
-      if (!user) return
+      if (!user) throw new Error("You must be signed in to remove an address.")
       const previous = user
-      setUser({ ...user, addresses: user.addresses.filter((a) => a.id !== id) })
+      const next = { ...user, addresses: user.addresses.filter((a) => a.id !== id) }
+      setUser(next)
+      setStoredUser(next)
       try {
         await fetchApi(`/api/account/addresses/${id}`, { method: "DELETE" })
       } catch {
         setUser(previous)
+        setStoredUser(previous)
+        throw new Error("The address could not be removed. Please try again.")
       }
     },
     [user],
