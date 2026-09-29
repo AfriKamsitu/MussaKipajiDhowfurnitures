@@ -157,6 +157,46 @@ export function DashboardSummary() {
 
   return (
     <div>
+      <section className="admin-dashboard-hero admin-enter relative isolate mb-7 overflow-hidden rounded-2xl border border-white/20 text-[#f1eee6] shadow-[0_28px_70px_-42px_rgba(17,19,15,0.65)]">
+        <Image
+          src="/reference-site/craft-workshop.webp"
+          alt="The Paje Dhow Furniture workshop"
+          fill
+          sizes="(max-width: 1024px) 100vw, 900px"
+          className="object-cover"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(17,19,15,0.95),rgba(17,19,15,0.62)_58%,rgba(17,19,15,0.22)),linear-gradient(0deg,rgba(17,19,15,0.75),transparent_70%)]" />
+        <div className="relative flex min-h-[270px] flex-col justify-between gap-10 px-5 py-6 sm:min-h-[300px] sm:px-8 sm:py-8 lg:px-10">
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#c5a274]">
+              Paje Dhow / Store dashboard
+            </p>
+            <span className="hidden text-[9px] uppercase tracking-[0.18em] text-white/55 sm:block">
+              Live workshop overview
+            </span>
+          </div>
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h1 className="max-w-[12ch] text-[clamp(2.3rem,5vw,4.4rem)] font-medium leading-[0.9] tracking-[-0.065em]">
+                Run the workshop
+                <br />
+                <span className="font-light italic text-[#c5a274]">moving.</span>
+              </h1>
+              <p className="mt-4 max-w-lg text-sm font-light leading-6 text-white/68">
+                See what is selling, what needs attention, and what the workshop is preparing next.
+              </p>
+            </div>
+            <Link
+              href="/admin/products"
+              className="group inline-flex min-h-11 w-fit items-center gap-3 border border-white/30 px-4 text-[10px] font-bold uppercase tracking-[0.16em] transition hover:border-[#c5a274] hover:text-[#c5a274]"
+            >
+              Manage collection
+              <ArrowUpRight className="size-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>

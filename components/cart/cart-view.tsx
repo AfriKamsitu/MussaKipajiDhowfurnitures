@@ -15,7 +15,7 @@ export function CartView() {
 
   if (user?.role === "admin") {
     return (
-      <div className="surface-premium rounded-3xl p-10 text-center sm:p-14">
+      <div className="border border-black/12 bg-white p-10 text-center shadow-[0_24px_60px_-50px_rgba(17,19,15,0.5)] sm:p-14">
         <h2 className="text-lg font-semibold text-foreground">Admin accounts cannot use buyer cart.</h2>
         <p className="mt-2 text-sm text-muted-foreground">Use the admin panel to manage products and orders.</p>
         <Link
@@ -30,7 +30,7 @@ export function CartView() {
 
   if (cart.length === 0) {
     return (
-      <div className="surface-premium flex flex-col items-center justify-center gap-4 rounded-3xl px-6 py-20 text-center">
+      <div className="border border-black/12 bg-white px-6 py-24 text-center">
         <span className="flex size-16 items-center justify-center rounded-full bg-secondary text-primary">
           <ShoppingBag className="size-7" />
         </span>
@@ -38,7 +38,7 @@ export function CartView() {
         <p className="text-sm text-muted-foreground">Looks like you haven&apos;t added anything yet.</p>
         <Link
           href="/shop"
-          className="mt-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-accent"
+          className="mt-2 rounded-none bg-[#263228] px-6 py-3 text-sm font-bold text-[#f1eee6] transition-colors hover:bg-[#11130f]"
         >
           Continue Shopping
         </Link>
@@ -47,17 +47,17 @@ export function CartView() {
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-3">
+    <div className="cart-editorial-view grid gap-8 lg:grid-cols-3">
       <div className="lg:col-span-2">
-        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+        <div className="overflow-hidden border border-black/12 bg-white shadow-[0_24px_60px_-50px_rgba(17,19,15,0.5)]">
           {cart.map((item) => (
             <div
               key={item.product.id}
-              className="flex gap-4 border-b border-border p-4 last:border-0"
+              className="group flex gap-5 border-b border-black/10 p-5 last:border-0 sm:p-6"
             >
               <Link
                 href={`/product/${item.product.id}`}
-                className="relative size-24 shrink-0 overflow-hidden rounded-xl bg-secondary sm:size-28"
+                className="relative size-24 shrink-0 overflow-hidden rounded-none bg-[#f1eee6] sm:size-32"
               >
                 <Image
                   src={item.product.image || "/placeholder.svg"}
@@ -72,7 +72,7 @@ export function CartView() {
                   <div>
                     <Link
                       href={`/product/${item.product.id}`}
-                      className="font-medium text-foreground hover:text-accent"
+                      className="font-medium tracking-[-0.02em] text-foreground transition-colors hover:text-accent"
                     >
                       {item.product.name}
                     </Link>
@@ -87,7 +87,7 @@ export function CartView() {
                   </button>
                 </div>
                 <div className="mt-auto flex items-center justify-between">
-                  <div className="flex items-center rounded-md border border-border">
+                  <div className="flex items-center border border-black/15 bg-[#f6f4ee]">
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
                       aria-label="Decrease quantity"
@@ -119,7 +119,7 @@ export function CartView() {
       </div>
 
       {/* Summary */}
-      <div className="surface-premium h-fit rounded-2xl p-6 lg:sticky lg:top-40">
+      <div className="h-fit border border-black/12 bg-[#f1eee6] p-6 shadow-[0_24px_60px_-50px_rgba(17,19,15,0.5)] lg:sticky lg:top-40 lg:p-8">
         <h2 className="text-lg font-semibold text-foreground">Order Summary</h2>
         <dl className="mt-4 grid gap-3 text-sm">
           <div className="flex justify-between">
@@ -137,7 +137,7 @@ export function CartView() {
         </dl>
         <Link
           href="/checkout"
-          className="mt-5 flex min-h-12 w-full items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-accent"
+          className="mt-5 flex min-h-12 w-full items-center justify-center rounded-none bg-[#263228] px-6 py-3 text-sm font-bold text-[#f1eee6] transition-colors hover:bg-[#11130f]"
         >
           Proceed to Checkout
         </Link>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Heart, Menu, ShoppingBag, UserRound, X } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 import { ScrollProgress } from "@/components/scroll-progress"
 import { useStore } from "@/components/store-provider"
@@ -151,46 +151,25 @@ export function EditorialSiteHeader() {
             ))}
           </nav>
 
-          <div className="ml-auto flex shrink-0 items-center gap-0.5 xl:ml-7">
+          <div className="ml-auto hidden shrink-0 items-center gap-2 xl:ml-7 xl:flex">
             <Link
-              href="/wishlist"
-              className="relative hidden size-10 items-center justify-center rounded-full text-white/72 transition hover:bg-white/10 hover:text-white sm:flex"
-              aria-label="Saved furniture"
+              href={user ? (isAdmin ? "/admin" : "/account") : "/login"}
+              className="inline-flex min-h-10 items-center border border-white/20 px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80 transition hover:border-[#c5a274] hover:text-[#c5a274]"
             >
-              <Heart className="size-[17px]" />
-              {wishlistCount > 0 && (
-                <span className="absolute right-0 top-0 grid size-4 place-items-center rounded-full bg-[#c5a274] text-[8px] font-black text-[#11130f]">
-                  {wishlistCount > 9 ? "9+" : wishlistCount}
-                </span>
-              )}
+              {user ? (isAdmin ? "Admin" : "Account") : "Sign in"}
             </Link>
             {!isAdmin && (
               <Link
                 href="/cart"
-                className="relative flex size-10 items-center justify-center rounded-full text-white/72 transition hover:bg-white/10 hover:text-white"
-                aria-label="Shopping cart"
+                className="inline-flex min-h-10 items-center gap-2 border border-white/20 px-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/80 transition hover:border-[#c5a274] hover:text-[#c5a274]"
               >
-                <ShoppingBag className="size-[17px]" />
-                {cartCount > 0 && (
-                  <span className="absolute right-0 top-0 grid size-4 place-items-center rounded-full bg-[#c5a274] text-[8px] font-black text-[#11130f]">
-                    {cartCount > 9 ? "9+" : cartCount}
-                  </span>
-                )}
+                Cart
+                {cartCount > 0 && <span className="text-[#c5a274]">({cartCount})</span>}
               </Link>
             )}
-            <Link
-              href={user ? (isAdmin ? "/admin" : "/account") : "/login"}
-              className="hidden size-10 items-center justify-center rounded-full text-white/72 transition hover:bg-white/10 hover:text-white md:flex"
-              aria-label={isAdmin ? "Admin workspace" : user ? "Buyer account" : "Sign in"}
-            >
-              <UserRound className="size-[17px]" />
-            </Link>
-            <Link
-              href="/contact?request=I would like to discuss a custom furniture project."
-              className="ml-2 hidden min-h-11 items-center rounded-[3px] bg-[#f1eee6] px-5 text-[12px] font-bold text-[#141612] transition duration-300 hover:-translate-y-0.5 hover:bg-white md:inline-flex"
-            >
-              Start a project <span className="ml-2" aria-hidden="true">↗</span>
-            </Link>
+          </div>
+
+          <div className="ml-auto flex shrink-0 items-center gap-0.5 xl:hidden">
             <button
               ref={menuButtonRef}
               type="button"

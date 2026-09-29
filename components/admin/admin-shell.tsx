@@ -42,7 +42,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="admin-glass sticky top-0 z-30 flex min-h-16 items-center gap-3 border-b border-border/80 px-4 py-3 shadow-[0_1px_0_rgb(40_25_18_/_0.03)] lg:px-6">
+        <header className="sticky top-0 z-30 flex min-h-16 items-center gap-3 border-b border-white/10 bg-[#11130f] px-4 py-3 text-[#f1eee6] shadow-[0_18px_40px_-28px_rgba(17,19,15,0.65)] lg:px-6">
           <button
             ref={menuButtonRef}
             type="button"
@@ -56,12 +56,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
           </button>
 
           <div>
-            <p className="text-sm font-bold text-foreground sm:hidden">Paje Dhow Admin</p>
-            <p className="hidden text-sm font-semibold text-foreground sm:block">Administration workspace</p>
+            <p className="text-sm font-bold text-[#f1eee6] sm:hidden">Paje Dhow Admin</p>
+            <p className="hidden text-sm font-semibold text-[#f1eee6] sm:block">Administration workspace</p>
+            <span className="hidden text-[10px] uppercase tracking-[0.2em] text-[#c5a274] md:block">
+              Zanzibar workshop / orders and products
+            </span>
           </div>
 
           <div className="ml-auto flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-full border border-primary/15 bg-primary/10 text-sm font-semibold text-primary shadow-sm">
+            <span className="flex size-10 items-center justify-center rounded-full border border-[#c5a274]/40 bg-[#c5a274]/15 text-sm font-semibold text-[#c5a274] shadow-sm">
               {initials || "AU"}
             </span>
           </div>

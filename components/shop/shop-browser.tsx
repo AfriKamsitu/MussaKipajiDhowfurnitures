@@ -158,7 +158,7 @@ export function ShopBrowser() {
   }, [activeCategory, activeColor, activeMaterials, verifiedOnly, readyToOrderOnly, lowMoqOnly, maxPrice, query, sort])
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[250px_minmax(0,1fr)] xl:gap-7">
+    <div className="shop-editorial-browser grid gap-6 xl:grid-cols-[250px_minmax(0,1fr)] xl:gap-7">
       <div className="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 sm:-mx-6 sm:px-6 xl:hidden">
         <button
           onClick={() => {

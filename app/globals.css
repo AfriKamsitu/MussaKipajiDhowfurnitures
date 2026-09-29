@@ -142,7 +142,10 @@
 }
 
 .admin-workspace {
-  background: #f5f6f2;
+  background:
+    radial-gradient(circle at 92% 0%, rgb(197 162 116 / 0.12), transparent 24rem),
+    radial-gradient(circle at 10% 16%, rgb(93 98 72 / 0.08), transparent 28rem),
+    #f5f6f2;
 }
 
 .admin-glass {
@@ -166,6 +169,16 @@
   box-shadow:
     0 2px 8px rgb(40 25 18 / 0.045),
     0 18px 40px -28px rgb(40 25 18 / 0.25);
+}
+
+.admin-dashboard-hero > img {
+  animation: admin-hero-drift 18s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes admin-hero-drift {
+  from { transform: scale(1.02) translate3d(0, 0, 0); }
+  to { transform: scale(1.08) translate3d(-1.5%, -1%, 0); }
 }
 
 .admin-enter {
@@ -607,5 +620,11 @@
 
   .admin-marquee-track > div > * {
     scroll-snap-align: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-dashboard-hero > img {
+    animation: none;
   }
 }

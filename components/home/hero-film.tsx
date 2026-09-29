@@ -1,7 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react"
-import { Pause, Play } from "lucide-react"
+import { useEffect, useRef, useSyncExternalStore } from "react"
 
 const motionQuery = "(prefers-reduced-motion: reduce)"
 
@@ -21,10 +20,6 @@ function getServerMotionPreference() {
 
 export function HeroFilm() {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const manuallyPaused = useRef(false)
-  const motionRequested = useRef(false)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [hasError, setHasError] = useState(false)
   const reduceMotion = useSyncExternalStore(
     subscribeToMotionPreference,
     getMotionPreference,
@@ -36,18 +31,13 @@ export function HeroFilm() {
     if (!video) return
 
     video.muted = true
-    motionRequested.current = false
     const rect = video.getBoundingClientRect()
     let inView = rect.bottom > 0 && rect.top < window.innerHeight
 
     function syncPlayback() {
       if (!video) return
-      const motionAllowed = !reduceMotion || motionRequested.current
-      if (inView && !document.hidden && motionAllowed && !manuallyPaused.current) {
-        void video.play().catch(() => {
-          // Keep the play button available when a browser declines autoplay.
-          if (video.paused) setIsPlaying(false)
-        })
+      if (inView && !document.hidden && !reduceMotion) {
+        void video.play().catch(() => undefined)
       } else {
         video.pause()
       }
@@ -68,67 +58,21 @@ export function HeroFilm() {
     }
   }, [reduceMotion])
 
-  function togglePlayback() {
-    const video = videoRef.current
-    if (!video) return
-
-    if (video.paused) {
-      manuallyPaused.current = false
-      motionRequested.current = true
-      video.muted = true
-      void video.play().catch(() => {
-        if (video.paused) setIsPlaying(false)
-      })
-    } else {
-      manuallyPaused.current = true
-      video.pause()
-    }
-  }
-
   return (
-    <>
+    <div className="hero-earth-zoom absolute inset-0" aria-hidden="true">
       <video
         ref={videoRef}
         id="hero-brand-film"
-        src="/videos/paje-dhow-preview.mp4"
-        poster="/videos/paje-dhow-preview-poster.jpg"
+        src="/videos/musa.mp4"
+        poster="/videos/musa-poster.jpg"
         autoPlay={!reduceMotion}
         muted
         loop
         playsInline
         preload="auto"
-        aria-hidden="true"
         tabIndex={-1}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
-        onError={() => setHasError(true)}
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[35%_center] sm:object-center"
+        className="pointer-events-none h-full w-full object-cover object-[35%_center] sm:object-center"
       />
-      <div className="absolute right-5 top-5 z-20 flex max-w-[calc(100%-2.5rem)] flex-wrap items-center justify-end gap-2 sm:right-10 sm:top-8 lg:right-[60px]">
-        <a
-          href="#brand-film"
-          className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/35 bg-black/50 px-4 text-xs font-medium text-white backdrop-blur-md transition-colors hover:bg-black/70 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-        >
-          <Play aria-hidden="true" className="size-3.5" />
-          Watch 13s film
-        </a>
-        {hasError ? (
-          <span role="status" className="rounded-full bg-black/70 px-4 py-3 text-xs text-white">
-            Video unavailable — use the film player below.
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={togglePlayback}
-            aria-controls="hero-brand-film"
-            aria-label={isPlaying ? "Pause background film" : "Play background film"}
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/35 bg-black/50 px-4 text-xs font-medium text-white backdrop-blur-md transition-colors hover:bg-black/70 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
-          >
-            {isPlaying ? <Pause aria-hidden="true" className="size-3.5" /> : <Play aria-hidden="true" className="size-3.5" />}
-            {isPlaying ? "Pause film" : "Play film"}
-          </button>
-        )}
-      </div>
-    </>
+    </div>
   )
 }

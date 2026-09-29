@@ -63,8 +63,25 @@ export function OrdersView() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="surface-premium rounded-2xl p-4">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 border-b border-black/12 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9b5e3b]">
+            Your orders
+          </p>
+          <h2 className="mt-2 text-3xl font-medium tracking-[-0.06em] text-[#11130f]">
+            Orders &amp; delivery
+          </h2>
+          <p className="mt-1 text-sm font-light text-[#756d61]">
+            See what is happening with every piece you have ordered.
+          </p>
+        </div>
+        <span className="w-fit border border-black/10 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#756d61]">
+          {user.orders.length} {user.orders.length === 1 ? "order" : "orders"} on record
+        </span>
+      </div>
+
+      <div className="border border-black/10 bg-white p-4 shadow-[0_18px_42px_-38px_rgba(17,19,15,0.5)]">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="relative max-w-lg flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -72,7 +89,7 @@ export function OrdersView() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search order number or product..."
-              className="w-full rounded-md border border-border bg-background py-2.5 pl-9 pr-3 text-sm outline-none transition-colors focus:border-primary"
+              className="min-h-11 w-full border border-black/15 bg-[#f6f4ee] py-2.5 pl-9 pr-3 text-sm outline-none transition-colors focus:border-[#9b5e3b]"
             />
           </div>
           <div className="scrollbar-none flex gap-2 overflow-x-auto">
@@ -81,10 +98,10 @@ export function OrdersView() {
                 key={item}
                 onClick={() => setStatus(item)}
                 className={cn(
-                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-bold transition-colors",
+                  "min-h-10 shrink-0 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
                   status === item
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border bg-card text-foreground hover:border-primary/40",
+                    ? "bg-[#263228] text-[#f1eee6]"
+                    : "border border-black/12 bg-white text-[#66675f] hover:border-[#9b5e3b]/50 hover:text-[#9b5e3b]",
                 )}
               >
                 {item}
@@ -102,19 +119,19 @@ export function OrdersView() {
         filtered.map((order) => {
           const currentStep = progressIndex(order.status)
           return (
-            <div key={order.id} className="surface-premium overflow-hidden rounded-2xl transition-shadow hover:shadow-premium">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-secondary/40 px-5 py-4">
+          <div key={order.id} className="overflow-hidden border border-black/10 bg-white shadow-[0_20px_48px_-38px_rgba(17,19,15,0.45)] transition-shadow hover:shadow-[0_25px_55px_-38px_rgba(17,19,15,0.55)]">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 bg-[#f1eee6]/70 px-5 py-4">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Order #{order.id}</p>
                   <p className="text-xs text-muted-foreground">Placed {new Date(order.date).toLocaleDateString()}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={cn("rounded-full px-3 py-1 text-xs font-medium", statusStyles[order.status])}>
+                  <span className={cn("px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em]", statusStyles[order.status])}>
                     {order.status}
                   </span>
                   <button
                     onClick={() => openWhatsApp(`Hello Paje Dhow Furniture, I need help with order #${order.id}.`)}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-bold text-foreground hover:border-primary/40"
+                    className="inline-flex min-h-10 items-center gap-1.5 border border-black/15 bg-white px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#263228] transition hover:border-[#9b5e3b] hover:text-[#9b5e3b]"
                   >
                     <MessageCircle className="size-3.5" />
                     Help
@@ -122,17 +139,17 @@ export function OrdersView() {
                 </div>
               </div>
 
-              <div className="border-b border-border px-5 py-4">
+              <div className="border-b border-black/10 px-5 py-5">
                 {order.status === "Cancelled" ? (
                   <div className="rounded-md bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
                     This order was cancelled.
                   </div>
                 ) : (
-                  <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-4 gap-2 sm:gap-3">
                     {progressSteps.map((step, index) => (
                       <div key={step} className="min-w-0">
-                        <div className={cn("h-1.5 rounded-full", index <= currentStep ? "bg-primary" : "bg-border")} />
-                        <p className={cn("mt-2 truncate text-[11px] font-semibold", index <= currentStep ? "text-primary" : "text-muted-foreground")}>
+                        <div className={cn("h-1 transition-colors", index <= currentStep ? "bg-[#9b5e3b]" : "bg-black/10")} />
+                        <p className={cn("mt-2 truncate text-[10px] font-bold uppercase tracking-[0.1em]", index <= currentStep ? "text-[#9b5e3b]" : "text-[#aaa49a]")}>
                           {step}
                         </p>
                       </div>
@@ -141,10 +158,10 @@ export function OrdersView() {
                 )}
               </div>
 
-              <ul className="divide-y divide-border">
+              <ul className="divide-y divide-black/8">
                 {order.items.map((item, index) => (
                   <li key={`${item.name}-${index}`} className="flex items-center gap-4 px-5 py-4">
-                    <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-secondary">
+                    <div className="relative size-16 shrink-0 overflow-hidden bg-[#f1eee6]">
                       <Image src={item.image || "/placeholder.svg"} alt={item.name} fill sizes="64px" className="object-cover" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -156,9 +173,9 @@ export function OrdersView() {
                 ))}
               </ul>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Truck className="size-4 text-primary" />
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/10 bg-[#f8f7f3] px-5 py-4">
+                <div className="flex items-center gap-2 text-xs text-[#756d61]">
+                  <Truck className="size-4 text-[#9b5e3b]" />
                   Delivery details update as the order progresses.
                 </div>
                 <div className="text-right">

@@ -37,7 +37,7 @@ export function BrandFilm() {
         </h3>
         <p id="brand-film-description" className="mt-4 max-w-lg text-sm font-light leading-6 text-white/65">
           A dhow on the Zanzibar coast, reclaimed timber at the workbench, and hands shaping
-          its next chapter. An AI-generated concept preview, presented without sound.
+          its next chapter. A quiet look at the workshop, presented without sound.
         </p>
         <a
           href="/videos/paje-dhow-preview.mp4"

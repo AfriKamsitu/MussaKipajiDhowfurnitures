@@ -2,7 +2,7 @@ import { Check, MapPin, MessageCircle, ShoppingBag } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 const steps = [
-  { id: "cart", label: "Cart", detail: "Your pieces", icon: ShoppingBag },
+  { id: "cart", label: "Cart", detail: "Items in your cart", icon: ShoppingBag },
   { id: "details", label: "Details", detail: "Delivery", icon: MapPin },
   { id: "confirm", label: "Confirm", detail: "WhatsApp", icon: MessageCircle },
 ] as const
