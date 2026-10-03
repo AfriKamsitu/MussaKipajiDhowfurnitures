@@ -58,3 +58,4 @@ The frontend obtains a provider access token and sends it to `POST /api/auth/soc
   deploying multiple instances or an ephemeral/serverless frontend.
 - Run `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm build`, and
   `mvn --file backend/pom.xml test` before release.
+"# KipajiDhowfurnitures" 
