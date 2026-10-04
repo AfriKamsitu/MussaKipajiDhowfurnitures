@@ -1,487 +1,447 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { useSearchParams } from "next/navigation"
-import { BadgeCheck, Boxes, ChevronDown, ChevronLeft, ChevronRight, PackageCheck, SlidersHorizontal } from "lucide-react"
-import { ProductCard } from "@/components/product-card"
-import { fetchApi } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { ChevronLeft, ChevronRight, SearchX, SlidersHorizontal, X } from "lucide-react"
+import { useCategories } from "@/components/categories-provider"
+import { Breadcrumb } from "@/components/page-shell"
+import { ProductGrid, ProductGridSkeleton } from "@/components/product-card"
+import { EmptyState, ErrorState } from "@/components/state-panels"
 import { useStoreSettings } from "@/components/store-settings-provider"
-import { normalizeCategory, normalizeProduct, formatPrice, type Category, type Product, type SpringPage } from "@/lib/data"
+import {
+  emptyFilters,
+  FilterPanel,
+  type Facet,
+  type ShopFacets,
+  type ShopFilters,
+} from "@/components/shop/filter-panel"
+import { hasReviews, isAvailable, listCatalog } from "@/lib/catalog"
+import { formatPrice, type Product } from "@/lib/data"
+import { cn } from "@/lib/utils"
 
-const sortOptions = ["Latest", "Price: Low to High", "Price: High to Low", "Top Rated"]
+const PAGE_SIZE = 24
 
-const colorSwatches = [
-  { name: "Natural Teak", value: "#c8902f" },
-  { name: "Dark Mahogany", value: "#3b2f2a" },
-  { name: "Weathered Grey", value: "#9ca3af" },
-  { name: "Ocean Blue", value: "#1e3a5f" },
-  { name: "Forest Green", value: "#2f5233" },
+const baseSortOptions = [
+  { value: "recommended", label: "Recommended" },
+  { value: "price-asc", label: "Price: low to high" },
+  { value: "price-desc", label: "Price: high to low" },
+  { value: "newest", label: "Newest" },
 ]
+const ratingSortOption = { value: "rating", label: "Customer rating" }
+/** Sort keys used by links from before the redesign. */
+const legacySort: Record<string, string> = { new: "newest", popular: "rating" }
 
-const materials = ["Reclaimed Wood", "Teak", "Mahogany", "Hardwood"]
-const PAGE_SIZE = 20
+function parseList(value: string | null) {
+  return value ? value.split(",").map((item) => item.trim()).filter(Boolean) : []
+}
+
+function filtersFromParams(params: URLSearchParams): ShopFilters {
+  return {
+    category: params.get("category") ?? "",
+    min: (params.get("min") ?? "").replace(/[^\d]/g, ""),
+    max: (params.get("max") ?? "").replace(/[^\d]/g, ""),
+    materials: parseList(params.get("material")),
+    colors: parseList(params.get("color")),
+    inStock: params.get("stock") === "1",
+    rating: Math.min(5, Math.max(0, Number(params.get("rating")) || 0)),
+  }
+}
+
+function countFacet(values: string[]): Facet[] {
+  const counts = new Map<string, number>()
+  values.forEach((value) => counts.set(value, (counts.get(value) ?? 0) + 1))
+  return [...counts.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
+}
+
+function pageWindow(current: number, total: number) {
+  const pages = new Set([1, total, current - 1, current, current + 1])
+  return [...pages].filter((page) => page >= 1 && page <= total).sort((a, b) => a - b)
+}
 
 export function ShopBrowser() {
-  const { currency } = useStoreSettings()
+  const router = useRouter()
+  const pathname = usePathname()
   const params = useSearchParams()
-  const query = params.get("q")?.toLowerCase() ?? ""
-  const paramSort = params.get("sort")
-  const paramCategory = params.get("category")
+  const { currency } = useStoreSettings()
 
-  const [categories, setCategories] = useState<Category[]>([])
-  const [products, setProducts] = useState<Product[]>([])
-  const [activeCategory, setActiveCategory] = useState("all")
-  const [maxPrice, setMaxPrice] = useState<number | null>(null)
-  const [activeColor, setActiveColor] = useState<string | null>(null)
-  const [activeMaterials, setActiveMaterials] = useState<string[]>([])
-  const [sort, setSort] = useState(
-    paramSort === "new" ? "Latest" : paramSort === "popular" ? "Top Rated" : "Latest",
-  )
-  const [sortOpen, setSortOpen] = useState(false)
+  const query = (params.get("q") ?? "").trim()
+  const rawSort = params.get("sort") ?? "recommended"
+  const sort = legacySort[rawSort] ?? rawSort
+  const page = Math.max(1, Number(params.get("page")) || 1)
+  const filters = useMemo(() => filtersFromParams(new URLSearchParams(params.toString())), [params])
 
-  const [page, setPage] = useState(1)
-  const [filtersOpen, setFiltersOpen] = useState(false)
-  const [verifiedOnly, setVerifiedOnly] = useState(false)
-  const [readyToOrderOnly, setReadyToOrderOnly] = useState(false)
-  const [lowMoqOnly, setLowMoqOnly] = useState(false)
-  const featuredRailRef = useRef<HTMLDivElement>(null)
+  const [products, setProducts] = useState<Product[] | null>(null)
+  const [failed, setFailed] = useState(false)
+  const categories = useCategories()
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [draft, setDraft] = useState<ShopFilters>(emptyFilters)
+  const requestRef = useRef(0)
+  const resultsRef = useRef<HTMLDivElement>(null)
+  const filterButtonRef = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
-    fetchApi<Record<string, unknown>[]>("/api/categories")
-      .then((payload) => {
-        const list = Array.isArray(payload) ? payload : []
-        setCategories(list.map(normalizeCategory))
+  const load = useCallback(() => {
+    const request = ++requestRef.current
+    setFailed(false)
+    setProducts(null)
+    listCatalog({ q: query || undefined })
+      .then((list) => {
+        if (request === requestRef.current) setProducts(list)
       })
-      .catch(() => setCategories([]))
-  }, [])
-
-  useEffect(() => {
-    const params = new URLSearchParams()
-    if (query) params.set("q", query)
-    params.set("size", "100")
-    const qs = params.toString()
-    fetchApi<SpringPage<Record<string, unknown>>>(`/api/products${qs ? `?${qs}` : ""}`)
-      .then((payload) => {
-        const content = Array.isArray(payload?.content) ? payload.content : []
-        setProducts(content.map(normalizeProduct))
+      .catch(() => {
+        if (request === requestRef.current) setFailed(true)
       })
-      .catch(() => setProducts([]))
   }, [query])
 
-  useEffect(() => {
-    if (paramCategory && categories.some((category) => category.slug === paramCategory)) {
-      setActiveCategory(paramCategory)
-    }
-  }, [categories, paramCategory])
+  useEffect(load, [load])
 
-  const searching = query.length > 0
-  const activeCategoryName = searching
-    ? `Results for “${query}”`
-    : activeCategory === "all"
-      ? "All Products"
-      : (categories.find((c) => c.slug === activeCategory)?.name ?? "All Products")
+  /** Write filter, sort and page state to the URL so it survives reloads, sharing and back/forward. */
+  const navigate = useCallback(
+    (next: Partial<ShopFilters> & { sort?: string; page?: number }, options?: { scroll?: boolean }) => {
+      const merged = { ...filters, ...next }
+      const search = new URLSearchParams()
+      if (query) search.set("q", query)
+      if (merged.category) search.set("category", merged.category)
+      if (merged.min) search.set("min", merged.min)
+      if (merged.max) search.set("max", merged.max)
+      if (merged.materials.length) search.set("material", merged.materials.join(","))
+      if (merged.colors.length) search.set("color", merged.colors.join(","))
+      if (merged.inStock) search.set("stock", "1")
+      if (merged.rating) search.set("rating", String(merged.rating))
+      const nextSort = next.sort ?? sort
+      if (nextSort !== "recommended") search.set("sort", nextSort)
+      // Any filter or sort change returns to the first page.
+      if (next.page && next.page > 1) search.set("page", String(next.page))
+      const qs = search.toString()
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+      if (options?.scroll) resultsRef.current?.scrollIntoView({ block: "start" })
+    },
+    [filters, pathname, query, router, sort],
+  )
 
-  function toggleMaterial(m: string) {
-    setActiveMaterials((prev) =>
-      prev.includes(m) ? prev.filter((x) => x !== m) : [...prev, m],
-    )
-  }
+  const inCategory = useMemo(
+    () => (products ?? []).filter((product) => !filters.category || product.category === filters.category),
+    [products, filters.category],
+  )
 
-  const filtered = useMemo(() => {
-    let list = searching
-      ? products.filter(
-          (p) =>
-            p.name.toLowerCase().includes(query) ||
-            p.material.toLowerCase().includes(query) ||
-            p.category.toLowerCase().includes(query) ||
-            p.supplier?.name.toLowerCase().includes(query),
-        )
-      : activeCategory === "all"
-        ? products
-        : products.filter((p) => p.category === activeCategory)
-    if (maxPrice != null) list = list.filter((p) => p.price <= maxPrice)
-    if (activeColor) list = list.filter((p) => p.colors.includes(activeColor))
-    if (activeMaterials.length > 0) list = list.filter((p) => activeMaterials.includes(p.material))
-    if (verifiedOnly) list = list.filter((p) => Boolean(p.supplier?.verified))
-    if (readyToOrderOnly) {
-      list = list.filter((p) => p.inStock ?? (p.stock == null || p.stock > 0))
-    }
-    if (lowMoqOnly) list = list.filter((p) => Math.max(1, p.moq ?? 1) <= 2)
+  const facets = useMemo<ShopFacets>(
+    () => ({
+      materials: countFacet(inCategory.map((product) => product.material.trim()).filter(Boolean)),
+      colors: countFacet(inCategory.flatMap((product) => product.colors.map((color) => color.trim().toLowerCase())).filter(Boolean)),
+      hasRatings: inCategory.some(hasReviews),
+      hasOutOfStock: inCategory.some((product) => !isAvailable(product)),
+    }),
+    [inCategory],
+  )
 
-    const sorted = [...list]
-    if (sort === "Price: Low to High") sorted.sort((a, b) => a.price - b.price)
-    else if (sort === "Price: High to Low") sorted.sort((a, b) => b.price - a.price)
-    else if (sort === "Top Rated") sorted.sort((a, b) => b.rating - a.rating)
-    return sorted
-  }, [activeCategory, maxPrice, activeColor, activeMaterials, verifiedOnly, readyToOrderOnly, lowMoqOnly, sort, query, searching, products])
+  const categoryOptions = useMemo(
+    () =>
+      categories.map((category) => ({
+        ...category,
+        // With a search active, show how many results fall in each category.
+        count: products ? products.filter((product) => product.category === category.slug).length : category.count,
+      })),
+    [categories, products],
+  )
 
-  const priceCeiling = useMemo(() => {
-    const highest = products.reduce((maximum, product) => Math.max(maximum, product.price), 100000)
-    return Math.max(100000, Math.ceil(highest / 50000) * 50000)
-  }, [products])
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
-  const currentPage = Math.min(page, totalPages)
-  const pageStart = filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
-  const pageEnd = Math.min(currentPage * PAGE_SIZE, filtered.length)
-  const visibleProducts = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
-  const activeFilterCount =
-    (activeCategory !== "all" ? 1 : 0) +
-    (maxPrice != null && maxPrice < priceCeiling ? 1 : 0) +
-    (activeColor ? 1 : 0) +
-    activeMaterials.length +
-    (verifiedOnly ? 1 : 0) +
-    (readyToOrderOnly ? 1 : 0) +
-    (lowMoqOnly ? 1 : 0)
-
-  function scrollFeatured(direction: -1 | 1) {
-    featuredRailRef.current?.scrollBy({
-      left: direction * Math.min(featuredRailRef.current.clientWidth * 0.82, 760),
-      behavior: "smooth",
+  const results = useMemo(() => {
+    const min = filters.min ? Number(filters.min) : null
+    const max = filters.max ? Number(filters.max) : null
+    const list = inCategory.filter((product) => {
+      if (min != null && product.price < min) return false
+      if (max != null && product.price > max) return false
+      if (filters.inStock && !isAvailable(product)) return false
+      if (filters.materials.length && !filters.materials.includes(product.material.trim())) return false
+      if (
+        filters.colors.length
+        && !product.colors.some((color) => filters.colors.includes(color.trim().toLowerCase()))
+      ) return false
+      if (filters.rating && !(hasReviews(product) && product.rating >= filters.rating)) return false
+      return true
     })
-  }
 
-  function clearAllFilters() {
-    setActiveCategory("all")
-    setMaxPrice(null)
-    setActiveColor(null)
-    setActiveMaterials([])
-    setVerifiedOnly(false)
-    setReadyToOrderOnly(false)
-    setLowMoqOnly(false)
-    setPage(1)
-  }
+    // Array.prototype.sort is stable, so ties keep the API's newest-first order.
+    if (sort === "price-asc") return [...list].sort((a, b) => a.price - b.price)
+    if (sort === "price-desc") return [...list].sort((a, b) => b.price - a.price)
+    if (sort === "rating") {
+      return [...list].sort((a, b) => Number(hasReviews(b)) * b.rating - Number(hasReviews(a)) * a.rating)
+    }
+    if (sort === "newest") return list
+    return [...list].sort((a, b) => Number(isAvailable(b)) - Number(isAvailable(a)))
+  }, [inCategory, filters, sort])
 
+  const totalPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const visible = results.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const sortOptions = facets.hasRatings ? [...baseSortOptions, ratingSortOption] : baseSortOptions
+  const activeCategory = categories.find((category) => category.slug === filters.category)
+  const title = query ? `Results for “${query}”` : (activeCategory?.name ?? "All Furniture")
+
+  const chips = [
+    filters.category && activeCategory && query
+      ? { label: activeCategory.name, clear: { category: "" } }
+      : null,
+    filters.min || filters.max
+      ? {
+          label: `${filters.min ? formatPrice(Number(filters.min), currency) : "Any"} – ${filters.max ? formatPrice(Number(filters.max), currency) : "Any"}`,
+          clear: { min: "", max: "" },
+        }
+      : null,
+    filters.inStock ? { label: "In stock", clear: { inStock: false } } : null,
+    ...filters.materials.map((material) => ({
+      label: material,
+      clear: { materials: filters.materials.filter((item) => item !== material) },
+    })),
+    ...filters.colors.map((color) => ({
+      label: color,
+      clear: { colors: filters.colors.filter((item) => item !== color) },
+    })),
+    filters.rating ? { label: `${filters.rating}★ & up`, clear: { rating: 0 } } : null,
+  ].filter(Boolean) as { label: string; clear: Partial<ShopFilters> }[]
+
+  function openDrawer() {
+    setDraft(filters)
+    setDrawerOpen(true)
+  }
 
   useEffect(() => {
-    setPage(1)
-  }, [activeCategory, activeColor, activeMaterials, verifiedOnly, readyToOrderOnly, lowMoqOnly, maxPrice, query, sort])
+    if (!drawerOpen) return
+    const trigger = filterButtonRef.current
+    document.body.classList.add("sf-scroll-locked")
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setDrawerOpen(false)
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown)
+      document.body.classList.remove("sf-scroll-locked")
+      trigger?.focus()
+    }
+  }, [drawerOpen])
 
   return (
-    <div className="shop-editorial-browser grid gap-6 xl:grid-cols-[250px_minmax(0,1fr)] xl:gap-7">
-      <div className="scrollbar-none -mx-3 flex gap-2 overflow-x-auto px-3 sm:-mx-6 sm:px-6 xl:hidden">
-        <button
-          onClick={() => {
-            setActiveCategory("all")
-            setPage(1)
-          }}
-          className={cn(
-            "min-h-11 shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold",
-            activeCategory === "all"
-              ? "bg-primary text-primary-foreground"
-              : "border border-border bg-card text-foreground",
-          )}
-        >
-          All
-        </button>
-        {categories.map((cat) => (
+    <div ref={resultsRef} className="scroll-mt-[calc(var(--site-header-height)+0.5rem)]">
+      <Breadcrumb
+        items={[
+          { label: "Home", href: "/" },
+          ...(query || activeCategory ? [{ label: "All Furniture", href: "/shop" }] : []),
+          { label: query ? "Search" : (activeCategory?.name ?? "All Furniture") },
+        ]}
+      />
+
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold tracking-[-0.02em] text-foreground sm:text-2xl">{title}</h1>
+          <p className="mt-0.5 text-sm text-muted-foreground" aria-live="polite">
+            {products === null && !failed
+              ? "Loading…"
+              : `${results.length} ${results.length === 1 ? "product" : "products"}`}
+          </p>
+        </div>
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <button
-            key={cat.slug}
-            onClick={() => {
-              setActiveCategory(cat.slug)
-              setPage(1)
-            }}
-            className={cn(
-              "min-h-11 shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium",
-              activeCategory === cat.slug
-                ? "border-accent bg-accent text-accent-foreground"
-                : "border-border bg-card text-foreground",
-            )}
+            ref={filterButtonRef}
+            type="button"
+            onClick={openDrawer}
+            className="sf-btn sf-btn-outline sf-btn-sm !min-h-10 flex-1 sm:flex-none lg:hidden"
           >
-            {cat.name}
+            <SlidersHorizontal className="size-4" aria-hidden="true" />
+            Filters{chips.length > 0 ? ` (${chips.length})` : ""}
           </button>
-        ))}
+          <label className="flex min-w-0 flex-1 items-center gap-2 text-sm text-muted-foreground sm:flex-none">
+            <span className="hidden shrink-0 sm:inline">Sort by</span>
+            <select
+              value={sortOptions.some((option) => option.value === sort) ? sort : "recommended"}
+              onChange={(event) => navigate({ sort: event.target.value })}
+              aria-label="Sort products"
+              className="sf-input !min-h-10 cursor-pointer py-1.5 font-semibold"
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
       </div>
 
-      {/* Mobile filter toggle */}
-      <button
-        onClick={() => setFiltersOpen((v) => !v)}
-        className="sticky top-[112px] z-20 flex min-h-11 items-center justify-between gap-3 rounded-full border border-border bg-white/95 px-4 py-2.5 text-sm font-bold text-foreground shadow-soft backdrop-blur xl:hidden"
-        aria-expanded={filtersOpen}
-        aria-controls="shop-filters"
-      >
-        <span className="flex items-center gap-2">
-          <SlidersHorizontal className="size-4" />
-          {filtersOpen ? "Close filters" : "Filters"}
-        </span>
-        {activeFilterCount > 0 && (
-          <span className="flex min-w-6 items-center justify-center rounded-full bg-primary px-2 py-0.5 text-[10px] font-black text-primary-foreground">
-            {activeFilterCount}
-          </span>
-        )}
-      </button>
-
-      {/* Sidebar */}
-      <aside id="shop-filters" className={cn("space-y-5 xl:sticky xl:top-36 xl:block xl:self-start", filtersOpen ? "block" : "hidden")}>
-        <div className="surface-premium rounded-[1.5rem] p-5">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="text-sm font-black text-foreground">Filters</h3>
-            {activeFilterCount > 0 && (
+      {chips.length > 0 && (
+        <ul className="mt-3 flex flex-wrap items-center gap-2" aria-label="Active filters">
+          {chips.map((chip, index) => (
+            <li key={`${chip.label}-${index}`}>
               <button
                 type="button"
-                onClick={clearAllFilters}
-                className="rounded-full px-2 py-1 text-[11px] font-bold text-primary transition-colors hover:bg-primary/10"
+                onClick={() => navigate(chip.clear)}
+                aria-label={`Remove filter ${chip.label}`}
+                className="inline-flex min-h-8 items-center gap-1.5 border border-input bg-card pl-3 pr-2 text-[13px] capitalize hover:border-primary"
               >
-                Clear all
-              </button>
-            )}
-          </div>
-          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Categories</p>
-          <ul className="space-y-1">
-            <li>
-              <button
-                onClick={() => {
-                  setActiveCategory("all")
-                  setPage(1)
-                }}
-                className={cn(
-                  "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors",
-                  activeCategory === "all"
-                    ? "bg-primary font-bold text-primary-foreground"
-                    : "text-foreground hover:bg-secondary",
-                )}
-              >
-                <span>All products</span>
-                <span className="text-xs opacity-70">{products.length}</span>
+                {chip.label}
+                <X className="size-3.5" aria-hidden="true" />
               </button>
             </li>
-            {categories.map((cat) => (
-              <li key={cat.slug}>
-                <button
-                  onClick={() => {
-                    setActiveCategory(cat.slug)
-                    setPage(1)
-                  }}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors",
-                    activeCategory === cat.slug
-                      ? "bg-sidebar-accent font-medium text-accent"
-                      : "text-foreground hover:bg-secondary",
-                  )}
-                >
-                  <span>{cat.name}</span>
-                  <span className="text-xs text-muted-foreground">{cat.count}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="surface-premium rounded-[1.5rem] p-5">
-          <h3 className="mb-4 text-sm font-semibold text-foreground">Filter by Price</h3>
-          <input
-            type="range"
-            min={0}
-            max={priceCeiling}
-            step={50000}
-            value={maxPrice ?? priceCeiling}
-            onChange={(e) => setMaxPrice(Number(e.target.value))}
-            className="w-full accent-[var(--accent)]"
-            aria-label="Maximum price"
-          />
-          <p className="mt-3 text-xs text-muted-foreground">
-            Up to {formatPrice(maxPrice ?? priceCeiling, currency)}
-          </p>
-          {maxPrice != null && maxPrice < priceCeiling && (
+          ))}
+          <li>
             <button
               type="button"
-              onClick={() => setMaxPrice(null)}
-              className="mt-3 w-full rounded-md border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
+              onClick={() => navigate({ ...emptyFilters, category: query ? "" : filters.category })}
+              className="min-h-8 px-1 text-[13px] font-semibold text-primary hover:underline"
             >
-              Clear price filter
+              Clear all
             </button>
-          )}
-        </div>
+          </li>
+        </ul>
+      )}
 
-        <div className="surface-premium rounded-[1.5rem] p-5">
-          <h3 className="mb-3 text-sm font-semibold text-foreground">Color</h3>
-          <div className="flex flex-wrap gap-3">
-            {colorSwatches.map((c) => (
-              <button
-                key={c.value}
-                onClick={() => setActiveColor((prev) => (prev === c.value ? null : c.value))}
-                aria-label={c.name}
-                className={cn(
-                  "size-11 rounded-full border-2 transition-all xl:size-9",
-                  activeColor === c.value ? "border-accent ring-2 ring-accent/30" : "border-border",
-                )}
-                style={{ backgroundColor: c.value }}
+      <div className="mt-4 grid gap-6 lg:grid-cols-[236px_minmax(0,1fr)]">
+        <aside aria-label="Filters" className="hidden lg:block">
+          <div className="sf-card sf-sticky-below-header max-h-[calc(100vh-var(--site-header-height)-2rem)] overflow-y-auto p-4">
+            <FilterPanel
+              value={filters}
+              onChange={(next) => navigate(next)}
+              categories={categoryOptions}
+              facets={facets}
+              currency={currency}
+              totalInScope={products?.length ?? 0}
+            />
+          </div>
+        </aside>
+
+        <div className="min-w-0">
+          {failed ? (
+            <ErrorState title="We couldn't load the furniture" onRetry={load} />
+          ) : products === null ? (
+            <ProductGridSkeleton count={8} className="lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4" />
+          ) : results.length === 0 ? (
+            <EmptyState
+              icon={SearchX}
+              title={query ? `No results for “${query}”` : "No furniture matches these filters"}
+              description={
+                chips.length > 0
+                  ? "Try removing a filter to see more furniture."
+                  : query
+                    ? "Check the spelling or try a more general word, like “chair” or “table”."
+                    : "This category has no furniture yet."
+              }
+            >
+              {chips.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => navigate({ ...emptyFilters, category: filters.category })}
+                  className="sf-btn sf-btn-primary"
+                >
+                  Clear filters
+                </button>
+              )}
+              <Link href="/shop" className="sf-btn sf-btn-outline">
+                Browse all furniture
+              </Link>
+            </EmptyState>
+          ) : (
+            <>
+              <ProductGrid
+                products={visible}
+                priorityCount={4}
+                className="lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-4"
               />
-            ))}
-          </div>
-        </div>
-
-        <div className="surface-premium rounded-[1.5rem] p-5">
-          <h3 className="mb-3 text-sm font-semibold text-foreground">Material</h3>
-          <ul className="space-y-2.5">
-            {materials.map((m) => (
-              <li key={m}>
-                <label className="flex cursor-pointer items-center gap-2.5 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={activeMaterials.includes(m)}
-                    onChange={() => toggleMaterial(m)}
-                    className="size-4 rounded border-border accent-[var(--accent)]"
-                  />
-                  {m}
-                </label>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </aside>
-
-      {/* Main content */}
-      <div className="min-w-0">
-        <div className="mb-5 flex flex-col gap-3 rounded-[1.5rem] border border-black/5 bg-white p-5 shadow-[0_18px_45px_-36px_rgba(62,67,48,0.5)] sm:mb-6 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
-          <div>
-            <h2 className="text-xl font-black text-foreground sm:text-2xl">{activeCategoryName}</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Showing {pageStart}-{pageEnd} of {filtered.length} results
-            </p>
-          </div>
-          <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
-            <div className="relative">
-              <span className="mr-2 hidden text-sm text-muted-foreground sm:inline">Sort by:</span>
-              <button
-                type="button"
-                onClick={() => setSortOpen((o) => !o)}
-                aria-expanded={sortOpen}
-                aria-controls="shop-sort-options"
-                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-black/5 bg-white px-4 py-2 text-xs font-black text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md sm:text-sm"
-              >
-                {sort}
-                <ChevronDown className="size-4" />
-              </button>
-              {sortOpen && (
-                <ul id="shop-sort-options" className="absolute right-0 z-10 mt-2 w-52 overflow-hidden rounded-xl border border-border bg-card p-1 shadow-elevated">
-                  {sortOptions.map((opt) => (
-                    <li key={opt}>
+              {totalPages > 1 && (
+                <nav aria-label="Pagination" className="mt-8 flex flex-wrap items-center justify-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => navigate({ page: currentPage - 1 }, { scroll: true })}
+                    disabled={currentPage <= 1}
+                    className="sf-btn sf-btn-outline sf-btn-sm !min-h-10"
+                  >
+                    <ChevronLeft className="size-4" aria-hidden="true" /> Previous
+                  </button>
+                  {pageWindow(currentPage, totalPages).map((item, index, list) => (
+                    <span key={item} className="flex items-center gap-1.5">
+                      {index > 0 && item - list[index - 1] > 1 && (
+                        <span className="px-1 text-muted-foreground" aria-hidden="true">…</span>
+                      )}
                       <button
-                        onClick={() => {
-                          setSort(opt)
-                          setSortOpen(false)
-                        }}
+                        type="button"
+                        onClick={() => navigate({ page: item }, { scroll: true })}
+                        aria-current={item === currentPage ? "page" : undefined}
+                        aria-label={`Page ${item}`}
                         className={cn(
-                          "block w-full px-3 py-2 text-left text-sm transition-colors hover:bg-secondary",
-                          sort === opt && "font-medium text-accent",
+                          "grid size-10 place-items-center border text-sm font-semibold",
+                          item === currentPage
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-input bg-card hover:border-primary",
                         )}
                       >
-                        {opt}
+                        {item}
                       </button>
-                    </li>
+                    </span>
                   ))}
-                </ul>
+                  <button
+                    type="button"
+                    onClick={() => navigate({ page: currentPage + 1 }, { scroll: true })}
+                    disabled={currentPage >= totalPages}
+                    className="sf-btn sf-btn-outline sf-btn-sm !min-h-10"
+                  >
+                    Next <ChevronRight className="size-4" aria-hidden="true" />
+                  </button>
+                </nav>
               )}
-            </div>
-          </div>
+            </>
+          )}
         </div>
-
-        {products.length > 0 && !searching && activeCategory === "all" && (
-          <section className="mb-5 overflow-hidden rounded-[1.25rem] border border-black/8 bg-white shadow-[0_18px_45px_-38px_rgba(17,19,15,0.6)]" aria-labelledby="selected-for-you-title">
-            <div className="flex items-end justify-between gap-4 px-4 pb-3 pt-4 sm:px-5 sm:pt-5">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-accent sm:text-[10px]">Curated from the workshop</p>
-                <h2 id="selected-for-you-title" className="mt-1 text-xl font-black tracking-[-0.035em] text-foreground sm:text-2xl">Selected for you</h2>
-              </div>
-              <div className="hidden items-center gap-2 sm:flex">
-                <button type="button" onClick={() => scrollFeatured(-1)} aria-label="Scroll selected products left" className="grid size-11 place-items-center rounded-full border border-border bg-white text-foreground transition hover:-translate-y-0.5 hover:border-primary/35 hover:text-primary">
-                  <ChevronLeft className="size-4" />
-                </button>
-                <button type="button" onClick={() => scrollFeatured(1)} aria-label="Scroll selected products right" className="grid size-11 place-items-center rounded-full bg-primary text-primary-foreground transition hover:-translate-y-0.5 hover:bg-accent">
-                  <ChevronRight className="size-4" />
-                </button>
-              </div>
-            </div>
-            <div ref={featuredRailRef} className="scrollbar-none flex snap-x snap-mandatory gap-2.5 overflow-x-auto px-4 pb-4 sm:gap-3 sm:px-5 sm:pb-5">
-              {products.slice(0, 8).map((product) => (
-                <div key={`featured-${product.id}`} className="w-[43vw] min-w-[148px] max-w-[185px] shrink-0 snap-start sm:w-[190px] sm:max-w-none lg:w-[205px]">
-                  <ProductCard product={product} layout="compact" />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <div className="scrollbar-none mb-5 flex gap-2 overflow-x-auto rounded-[1.1rem] border border-border bg-white p-2.5 shadow-[0_12px_34px_-30px_rgba(58,38,24,0.5)]" aria-label="Buyer sourcing filters">
-          <button
-            type="button"
-            onClick={() => setVerifiedOnly((value) => !value)}
-            aria-pressed={verifiedOnly}
-            className={cn(
-              "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-xs font-black transition-all",
-              verifiedOnly ? "border-sky-600 bg-sky-50 text-sky-700" : "border-border bg-white text-foreground hover:border-primary/35",
-            )}
-          >
-            <BadgeCheck className={cn("size-4", verifiedOnly && "fill-sky-600 text-white")} />
-            Verified supplier
-          </button>
-          <button
-            type="button"
-            onClick={() => setReadyToOrderOnly((value) => !value)}
-            aria-pressed={readyToOrderOnly}
-            className={cn(
-              "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-xs font-black transition-all",
-              readyToOrderOnly ? "border-emerald-600 bg-emerald-50 text-emerald-700" : "border-border bg-white text-foreground hover:border-primary/35",
-            )}
-          >
-            <PackageCheck className="size-4" />
-            Ready to order
-          </button>
-          <button
-            type="button"
-            onClick={() => setLowMoqOnly((value) => !value)}
-            aria-pressed={lowMoqOnly}
-            className={cn(
-              "inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-xs font-black transition-all",
-              lowMoqOnly ? "border-primary bg-primary/10 text-primary" : "border-border bg-white text-foreground hover:border-primary/35",
-            )}
-          >
-            <Boxes className="size-4" />
-            Low minimum order
-          </button>
-        </div>
-
-        {filtered.length === 0 ? (
-          <p className="surface-premium rounded-2xl p-14 text-center text-muted-foreground">
-            No products match your filters.
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-2.5 gap-y-6 sm:grid-cols-3 sm:gap-x-4 sm:gap-y-7 lg:grid-cols-4 min-[1880px]:grid-cols-5">
-            {visibleProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-        <nav className="mt-10 flex items-center justify-center gap-2" aria-label="Product pages">
-          {Array.from({ length: totalPages }, (_, index) => index + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPage(p)}
-              className={cn(
-                "flex size-11 items-center justify-center rounded-full border text-sm transition-all hover:-translate-y-0.5",
-                currentPage === p
-                  ? "border-accent bg-accent text-accent-foreground"
-                  : "border-border bg-card text-foreground hover:bg-secondary",
-              )}
-            >
-              {p}
-            </button>
-          ))}
-          <button
-            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
-            disabled={currentPage >= totalPages}
-            className="flex min-h-11 items-center gap-1 rounded-full border border-border bg-white px-4 py-2 text-sm font-bold text-foreground transition-all hover:-translate-y-0.5 hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Next
-            <ChevronDown className="size-4 -rotate-90" />
-          </button>
-        </nav>
-        )}
       </div>
+
+      {drawerOpen && (
+        <div className="fixed inset-0 z-[100] lg:hidden" role="dialog" aria-modal="true" aria-label="Filters">
+          <button
+            type="button"
+            aria-label="Close filters"
+            tabIndex={-1}
+            onClick={() => setDrawerOpen(false)}
+            className="sf-fade-in absolute inset-0 bg-black/55"
+          />
+          <div className="sf-drawer-enter-bottom absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-2xl bg-card shadow-elevated">
+            <div className="flex items-center justify-between border-b border-border px-4 py-3">
+              <h2 className="text-base font-bold text-foreground">Filters</h2>
+              <button
+                type="button"
+                onClick={() => setDrawerOpen(false)}
+                aria-label="Close filters"
+                className="grid size-10 place-items-center hover:bg-secondary"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 py-4">
+              <FilterPanel
+                value={draft}
+                onChange={setDraft}
+                categories={categoryOptions}
+                facets={facets}
+                currency={currency}
+                totalInScope={products?.length ?? 0}
+                immediatePrice
+              />
+            </div>
+            <div className="flex gap-2 border-t border-border px-4 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+              <button type="button" onClick={() => setDraft(emptyFilters)} className="sf-btn sf-btn-outline flex-1">
+                Reset
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  navigate(draft)
+                  setDrawerOpen(false)
+                }}
+                className="sf-btn sf-btn-primary flex-[2]"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

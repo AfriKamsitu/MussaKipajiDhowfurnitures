@@ -66,17 +66,17 @@ export function OrdersView() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 border-b border-black/12 pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9b5e3b]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#6b2b2b]">
             Your orders
           </p>
-          <h2 className="mt-2 text-3xl font-medium tracking-[-0.06em] text-[#11130f]">
+          <h2 className="mt-2 text-3xl font-medium tracking-[-0.06em] text-[#2a211b]">
             Orders &amp; delivery
           </h2>
-          <p className="mt-1 text-sm font-light text-[#756d61]">
+          <p className="mt-1 text-sm font-light text-[#6f6358]">
             See what is happening with every piece you have ordered.
           </p>
         </div>
-        <span className="w-fit border border-black/10 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#756d61]">
+        <span className="w-fit border border-black/10 bg-white px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#6f6358]">
           {user.orders.length} {user.orders.length === 1 ? "order" : "orders"} on record
         </span>
       </div>
@@ -89,7 +89,7 @@ export function OrdersView() {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search order number or product..."
-              className="min-h-11 w-full border border-black/15 bg-[#f6f4ee] py-2.5 pl-9 pr-3 text-sm outline-none transition-colors focus:border-[#9b5e3b]"
+              className="min-h-11 w-full border border-black/15 bg-[#f6f5f3] py-2.5 pl-9 pr-3 text-sm outline-none transition-colors focus:border-[#6b2b2b]"
             />
           </div>
           <div className="scrollbar-none flex gap-2 overflow-x-auto">
@@ -100,8 +100,8 @@ export function OrdersView() {
                 className={cn(
                   "min-h-10 shrink-0 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] transition-colors",
                   status === item
-                    ? "bg-[#263228] text-[#f1eee6]"
-                    : "border border-black/12 bg-white text-[#66675f] hover:border-[#9b5e3b]/50 hover:text-[#9b5e3b]",
+                    ? "bg-[#6b2b2b] text-[#f6f0e6]"
+                    : "border border-black/12 bg-white text-[#6f6358] hover:border-[#6b2b2b]/50 hover:text-[#6b2b2b]",
                 )}
               >
                 {item}
@@ -120,7 +120,7 @@ export function OrdersView() {
           const currentStep = progressIndex(order.status)
           return (
           <div key={order.id} className="overflow-hidden border border-black/10 bg-white shadow-[0_20px_48px_-38px_rgba(17,19,15,0.45)] transition-shadow hover:shadow-[0_25px_55px_-38px_rgba(17,19,15,0.55)]">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 bg-[#f1eee6]/70 px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 bg-[#f6f0e6]/70 px-5 py-4">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Order #{order.id}</p>
                   <p className="text-xs text-muted-foreground">Placed {new Date(order.date).toLocaleDateString()}</p>
@@ -131,7 +131,7 @@ export function OrdersView() {
                   </span>
                   <button
                     onClick={() => openWhatsApp(`Hello Paje Dhow Furniture, I need help with order #${order.id}.`)}
-                    className="inline-flex min-h-10 items-center gap-1.5 border border-black/15 bg-white px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#263228] transition hover:border-[#9b5e3b] hover:text-[#9b5e3b]"
+                    className="inline-flex min-h-10 items-center gap-1.5 border border-black/15 bg-white px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#6b2b2b] transition hover:border-[#6b2b2b] hover:text-[#6b2b2b]"
                   >
                     <MessageCircle className="size-3.5" />
                     Help
@@ -148,8 +148,8 @@ export function OrdersView() {
                     <div className="grid grid-cols-4 gap-2 sm:gap-3">
                     {progressSteps.map((step, index) => (
                       <div key={step} className="min-w-0">
-                        <div className={cn("h-1 transition-colors", index <= currentStep ? "bg-[#9b5e3b]" : "bg-black/10")} />
-                        <p className={cn("mt-2 truncate text-[10px] font-bold uppercase tracking-[0.1em]", index <= currentStep ? "text-[#9b5e3b]" : "text-[#aaa49a]")}>
+                        <div className={cn("h-1 transition-colors", index <= currentStep ? "bg-[#6b2b2b]" : "bg-black/10")} />
+                        <p className={cn("mt-2 truncate text-[10px] font-bold uppercase tracking-[0.1em]", index <= currentStep ? "text-[#6b2b2b]" : "text-[#aaa49a]")}>
                           {step}
                         </p>
                       </div>
@@ -161,7 +161,7 @@ export function OrdersView() {
               <ul className="divide-y divide-black/8">
                 {order.items.map((item, index) => (
                   <li key={`${item.name}-${index}`} className="flex items-center gap-4 px-5 py-4">
-                    <div className="relative size-16 shrink-0 overflow-hidden bg-[#f1eee6]">
+                    <div className="relative size-16 shrink-0 overflow-hidden bg-[#f6f0e6]">
                       <Image src={item.image || "/placeholder.svg"} alt={item.name} fill sizes="64px" className="object-cover" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -174,8 +174,8 @@ export function OrdersView() {
               </ul>
 
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/10 bg-[#f8f7f3] px-5 py-4">
-                <div className="flex items-center gap-2 text-xs text-[#756d61]">
-                  <Truck className="size-4 text-[#9b5e3b]" />
+                <div className="flex items-center gap-2 text-xs text-[#6f6358]">
+                  <Truck className="size-4 text-[#6b2b2b]" />
                   Delivery details update as the order progresses.
                 </div>
                 <div className="text-right">

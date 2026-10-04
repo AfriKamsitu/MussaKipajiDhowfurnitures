@@ -2,15 +2,20 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react"
 import { authInputClass } from "@/components/auth/auth-shell"
 import { SocialAuth } from "@/components/auth/social-auth"
 import { useAuth } from "@/components/auth-provider"
+import { safeRedirectPath } from "@/lib/redirect"
 import { withMinimumDuration } from "@/lib/timing"
 
 export function RegisterForm() {
   const router = useRouter()
+  // New buyers return to where they were (for example checkout); never into the admin area.
+  const requested = safeRedirectPath(useSearchParams().get("redirect"))
+  const destination = requested && !requested.startsWith("/admin") ? requested : "/account"
+  const redirectQuery = requested ? `?redirect=${encodeURIComponent(requested)}` : ""
   const { signUp, signInWithProvider } = useAuth()
   const [show, setShow] = useState(false)
   const [firstName, setFirstName] = useState("")
@@ -38,7 +43,7 @@ export function RegisterForm() {
         setError(signUpError)
         return
       }
-      router.push("/account")
+      router.push(destination)
       router.refresh()
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Registration failed.")
@@ -59,7 +64,7 @@ export function RegisterForm() {
         return
       }
       if (redirected) return
-      router.push("/account")
+      router.push(destination)
       router.refresh()
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Social registration failed.")
@@ -114,7 +119,7 @@ export function RegisterForm() {
       <button type="submit" disabled={loading} className="interactive-press flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-primary px-6 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-70">
         {loading ? <><Loader2 className="size-4 animate-spin" aria-hidden="true" />Creating account...</> : "Create account"}
       </button>
-      <p className="text-center text-sm text-muted-foreground">Already have an account?{" "}<Link href="/login" className="inline-flex min-h-11 items-center font-semibold text-primary hover:underline">Sign in</Link></p>
+      <p className="text-center text-sm text-muted-foreground">Already have an account?{" "}<Link href={`/login${redirectQuery}`} className="inline-flex min-h-11 items-center font-semibold text-primary hover:underline">Sign in</Link></p>
     </form>
   )
 }

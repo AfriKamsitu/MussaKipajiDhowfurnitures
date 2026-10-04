@@ -7,6 +7,7 @@ import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react"
 import { authInputClass } from "@/components/auth/auth-shell"
 import { SocialAuth } from "@/components/auth/social-auth"
 import { useAuth, type Role } from "@/components/auth-provider"
+import { safeRedirectPath } from "@/lib/redirect"
 import { withMinimumDuration } from "@/lib/timing"
 
 function destinationFor(role?: Role, redirectTo?: string | null) {
@@ -21,7 +22,7 @@ function destinationFor(role?: Role, redirectTo?: string | null) {
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirectTo = searchParams.get("redirect")
+  const redirectTo = safeRedirectPath(searchParams.get("redirect"))
   const { signIn, signInWithProvider } = useAuth()
 
   const [show, setShow] = useState(false)
@@ -113,7 +114,7 @@ export function LoginForm() {
         {loading ? <><Loader2 className="size-4 animate-spin" aria-hidden="true" />Signing in...</> : "Sign in"}
       </button>
       <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}<Link href="/register" className="inline-flex min-h-11 items-center font-semibold text-primary hover:underline">Create one</Link>
+        Don&apos;t have an account?{" "}<Link href={redirectTo ? `/register?redirect=${encodeURIComponent(redirectTo)}` : "/register"} className="inline-flex min-h-11 items-center font-semibold text-primary hover:underline">Create one</Link>
       </p>
     </form>
   )

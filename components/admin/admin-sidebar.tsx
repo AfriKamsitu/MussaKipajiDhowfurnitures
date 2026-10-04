@@ -62,13 +62,13 @@ function NavLink({
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-[background-color,color,transform,box-shadow] duration-200",
+        "group flex items-center gap-3 px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.14em] transition-colors duration-200",
         active
-          ? "translate-x-0.5 bg-primary text-primary-foreground shadow-[0_10px_26px_-14px_rgba(93,98,72,0.55)] hover:bg-primary/92"
-          : "text-sidebar-foreground hover:translate-x-1 hover:bg-sidebar-accent/80 hover:text-sidebar-accent-foreground",
+          ? "bg-primary text-primary-foreground"
+          : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-primary",
       )}
     >
-      <Icon className="size-[18px] transition-transform duration-200 group-hover:scale-110" />
+      <Icon className="size-4" />
       <span className="flex-1">{item.label}</span>
       {badge > 0 && (
         <span
@@ -124,19 +124,19 @@ export function AdminSidebar({
         id="admin-sidebar"
         aria-label="Admin navigation"
         className={cn(
-          "admin-glass fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border/80 transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-white transition-transform duration-300 lg:static lg:z-auto lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full",
         )}
       >
         {/* Brand */}
         <div className="flex items-center justify-between px-5 py-5">
           <Link href="/admin" className="group flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center rounded-lg bg-primary shadow-[0_9px_24px_-12px_rgb(117_75_51_/_0.75)] transition-transform duration-300 group-hover:-rotate-2 group-hover:scale-105">
-              <Image src="/paje-dhow-furniture-logo.jpeg" alt="Paje Dhow Furniture logo" width={36} height={36} className="size-7 rounded-full object-cover transition-transform duration-500 group-hover:rotate-2 group-hover:scale-110" />
+            <span className="flex size-9 items-center justify-center overflow-hidden rounded-full ring-1 ring-black/10">
+              <Image src="/paje-dhow-furniture-logo.jpeg" alt="Paje Dhow Furniture logo" width={36} height={36} className="size-9 rounded-full object-cover" />
             </span>
             <span className="leading-tight">
-              <span className="block text-base font-bold uppercase tracking-wide text-foreground">Paje Dhow</span>
-              <span className="block text-[11px] text-muted-foreground">Admin Panel</span>
+              <span className="block text-[13px] font-medium uppercase tracking-[0.16em] text-foreground">Paje Dhow</span>
+              <span className="block text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Admin panel</span>
             </span>
           </Link>
           <button type="button" data-admin-drawer-close onClick={onClose} className="grid size-11 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary lg:hidden" aria-label="Close admin menu">
@@ -146,7 +146,7 @@ export function AdminSidebar({
 
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-4">
           <div>
-            <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Main</p>
+            <p className="px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground/80">Main</p>
             <div className="space-y-1">
               {mainNav.map((item) => (
                 <NavLink key={item.href} item={item} active={isActive(item.href)} onNavigate={onClose} />
@@ -154,7 +154,7 @@ export function AdminSidebar({
             </div>
           </div>
           <div>
-            <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Manage</p>
+            <p className="px-3 pb-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground/80">Manage</p>
             <div className="space-y-1">
               {manageNav.map((item) => (
                 <NavLink key={item.href} item={item} active={isActive(item.href)} onNavigate={onClose} />

@@ -1,13 +1,16 @@
-import { EditorialSiteHeader } from "@/components/editorial-site-header"
-import { EditorialSiteFooter } from "@/components/editorial-site-footer"
-import { EditorialHome } from "@/components/home/editorial-home"
+import { HomeView } from "@/components/home/home-view"
+import { SiteFooter } from "@/components/site-footer"
+import { SiteHeader } from "@/components/site-header"
+import { getCatalogProducts } from "@/lib/catalog-server"
 
-export default function Home() {
+export default async function Home() {
+  const products = await getCatalogProducts()
+
   return (
-    <div className="min-h-screen bg-[#11130f] font-sans">
-      <EditorialSiteHeader />
-      <EditorialHome />
-      <EditorialSiteFooter />
+    <div className="flex min-h-screen flex-col bg-white">
+      <SiteHeader />
+      <HomeView initialProducts={products} />
+      <SiteFooter />
     </div>
   )
 }

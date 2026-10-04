@@ -27,7 +27,7 @@ export function StarRating({
                   className="absolute inset-0 overflow-hidden"
                   style={{ width: filled ? "100%" : "50%" }}
                 >
-                  <Star className={cn(dim, "fill-accent text-accent")} />
+                  <Star className={cn(dim, "fill-star text-star")} />
                 </span>
               )}
             </span>

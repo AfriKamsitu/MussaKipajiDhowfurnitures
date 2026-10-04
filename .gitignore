@@ -30,3 +30,11 @@ frontend-dev-*.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local working files that are not part of the application
+/output/
+/public/videos/
+__pycache__/
+*.pyc
+*.log
+/.agents/

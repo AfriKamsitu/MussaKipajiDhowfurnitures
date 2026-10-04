@@ -8,7 +8,7 @@ import { Reveal } from "@/components/reveal"
 
 export const metadata: Metadata = {
   title: "About Us",
-  description: "Discover the story, local craftsmanship, and community behind Paje Dhow Furniture in Zanzibar.",
+  description: "Paje Dhow Furniture started in 2019 in Nungwi, Zanzibar, and is now located in Bwejuu, Zanzibar.",
 }
 
 const principles = [
@@ -56,7 +56,7 @@ export default function AboutPage() {
         <Breadcrumb items={[{ label: "Home", href: "/" }, { label: "About" }]} />
       </div>
 
-      <section className="relative -mx-5 overflow-hidden bg-[#11130f] text-[#f1eee6] sm:-mx-8 lg:-mx-10">
+      <section className="relative -mx-5 overflow-hidden bg-[#2a211b] text-[#f6f0e6] sm:-mx-8 lg:-mx-10">
         <div className="absolute inset-y-0 right-0 w-full lg:w-[52%]">
           <Image
             src="/reference-site/craft-workshop.webp"
@@ -66,33 +66,34 @@ export default function AboutPage() {
             sizes="(max-width: 1024px) 100vw, 52vw"
             className="object-cover opacity-65 lg:opacity-90"
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,#11130f_0%,rgba(17,19,15,0.82)_40%,rgba(17,19,15,0.18)_100%)]" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,#2a211b_0%,rgba(17,19,15,0.82)_40%,rgba(17,19,15,0.18)_100%)]" />
         </div>
 
-        <div className="relative grid min-h-[680px] items-end px-5 py-12 sm:px-10 sm:py-16 lg:min-h-[720px] lg:grid-cols-[1fr_0.8fr] lg:px-10 lg:py-20">
+        <div className="relative grid min-h-[380px] items-end px-5 py-12 sm:px-10 sm:py-16 lg:min-h-[440px] lg:grid-cols-[1fr_0.8fr] lg:px-10 lg:py-20">
           <Reveal>
-            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#c5a274]">
-              Our beginning · Zanzibar
+            <p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#d9b98a]">
+              Our beginning · Nungwi, 2019
             </p>
-            <h1 className="mt-6 max-w-[9ch] text-[clamp(3.7rem,7vw,6.8rem)] font-medium leading-[0.88] tracking-[-0.07em]">
+            <h1 className="mt-6 max-w-[18ch] text-4xl sm:text-5xl font-medium leading-tight tracking-[-0.02em]">
               Old timber.
               <br />
-              <span className="font-light italic text-[#c5a274]">A new chapter.</span>
+              <span className="font-light italic text-[#d9b98a]">A new chapter.</span>
             </h1>
             <p className="mt-9 max-w-lg text-[15px] font-light leading-7 text-white/68 sm:text-base">
-              Paje Dhow Furniture began with a simple purpose: to create useful, lasting furniture
-              through local skill and the natural character of timber shaped by Zanzibar’s coast.
+              Paje Dhow Furniture started in 2019 in Nungwi, Zanzibar, and is now located in
+              Bwejuu, Zanzibar. From the beginning our purpose has been simple: useful, lasting
+              furniture made with local skill.
             </p>
           </Reveal>
 
           <div className="mt-16 grid grid-cols-3 border-t border-white/15 lg:col-span-2">
             {[
-              ["100%", "coastal craft"],
-              ["2018", "workshop founded"],
-              ["∞", "stories in the grain"],
+              ["2019", "started in Nungwi"],
+              ["Bwejuu", "our workshop today"],
+              ["Zanzibar", "made on the island"],
             ].map(([value, label]) => (
               <div key={label} className="border-r border-white/15 py-5 last:border-r-0">
-                <strong className="block text-2xl font-medium tracking-[-0.05em] text-[#f1eee6] sm:text-3xl">
+                <strong className="block text-2xl font-medium tracking-[-0.05em] text-[#f6f0e6] sm:text-3xl">
                   {value}
                 </strong>
                 <span className="mt-2 block text-[9px] uppercase tracking-[0.16em] text-white/48">
@@ -106,18 +107,18 @@ export default function AboutPage() {
 
       <section className="grid gap-12 border-b border-black/12 py-20 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20 lg:py-32">
         <Reveal>
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#9b5e3b]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#6b2b2b]">
             01 · Our story
           </p>
         </Reveal>
         <Reveal delay={100}>
-          <h2 className="max-w-[12ch] text-[clamp(2.8rem,5vw,5rem)] font-medium leading-[0.94] tracking-[-0.06em] text-[#11130f]">
+          <h2 className="max-w-[18ch] text-3xl sm:text-4xl font-medium leading-tight tracking-[-0.02em] text-[#2a211b]">
             Furniture rooted in place, purpose, and people.
           </h2>
           <div className="mt-10 grid gap-7 text-[15px] font-light leading-8 text-muted-foreground sm:grid-cols-2 sm:text-base">
             <p>
-              What started as a small workshop grew through customer trust and word of mouth. Our
-              makers now create tables, beds, cabinetry, seating, doors, and custom pieces for
+              What started in Nungwi in 2019 as a small workshop grew through customer trust and
+              word of mouth. Today we work from Bwejuu, where our makers create tables, beds, cabinetry, seating, doors, and custom pieces for
               homes, villas, lodges, and restaurants across the island.
             </p>
             <p>
@@ -129,7 +130,7 @@ export default function AboutPage() {
         </Reveal>
       </section>
 
-      <section className="grid gap-3 bg-[#11130f] px-0 py-3 text-[#f1eee6] sm:grid-cols-[1.25fr_0.75fr] sm:py-4">
+      <section className="grid gap-3 bg-[#2a211b] px-0 py-3 text-[#f6f0e6] sm:grid-cols-[1.25fr_0.75fr] sm:py-4">
         <div className="relative min-h-[360px] overflow-hidden sm:min-h-[540px]">
           <Image
             src="/reference-site/gallery.jpg"
@@ -143,8 +144,8 @@ export default function AboutPage() {
             Made for a life around it
           </p>
         </div>
-        <div className="flex min-h-[360px] flex-col justify-between bg-[#263228] p-7 sm:min-h-[540px] sm:p-10">
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#c5a274]">
+        <div className="flex min-h-[360px] flex-col justify-between bg-[#6b2b2b] p-7 sm:min-h-[540px] sm:p-10">
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#d9b98a]">
             A slower pace
           </p>
           <p className="max-w-sm text-[clamp(1.7rem,3vw,2.8rem)] font-light leading-[1.05] tracking-[-0.045em]">
@@ -159,10 +160,10 @@ export default function AboutPage() {
 
       <section className="border-b border-black/12 py-20 lg:py-32">
         <Reveal>
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#9b5e3b]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#6b2b2b]">
             02 · What guides us
           </p>
-          <h2 className="mt-6 max-w-[12ch] text-[clamp(2.8rem,5vw,5rem)] font-medium leading-[0.94] tracking-[-0.06em] text-[#11130f]">
+          <h2 className="mt-6 max-w-[18ch] text-3xl sm:text-4xl font-medium leading-tight tracking-[-0.02em] text-[#2a211b]">
             Local skill stays at the centre.
           </h2>
         </Reveal>
@@ -171,8 +172,8 @@ export default function AboutPage() {
           {principles.map((principle, index) => (
             <Reveal key={principle.title} delay={index * 80}>
               <article className="bg-white p-6 sm:min-h-64 sm:p-8">
-                <span className="text-[10px] text-[#9b5e3b]">0{index + 1}</span>
-                <h3 className="mt-10 text-lg font-medium tracking-[-0.035em] text-[#11130f]">
+                <span className="text-[10px] text-[#6b2b2b]">0{index + 1}</span>
+                <h3 className="mt-10 text-lg font-medium tracking-[-0.035em] text-[#2a211b]">
                   {principle.title}
                 </h3>
                 <p className="mt-7 text-sm font-light leading-7 text-muted-foreground">
@@ -187,7 +188,7 @@ export default function AboutPage() {
       <section className="border-b border-black/12 py-20 lg:py-32">
         <div className="grid gap-12 lg:grid-cols-[0.7fr_1.3fr] lg:gap-20">
           <Reveal>
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#9b5e3b]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#6b2b2b]">
               03 · How it takes shape
             </p>
           </Reveal>
@@ -195,8 +196,8 @@ export default function AboutPage() {
             {process.map((step, index) => (
               <Reveal key={step.title} delay={index * 70}>
                 <article className="grid grid-cols-[38px_88px_1fr] gap-3 border-b border-black/12 py-6 sm:grid-cols-[48px_140px_1fr]">
-                  <span className="text-[10px] text-[#9b5e3b]">{step.number}</span>
-                  <h3 className="text-sm font-medium text-[#11130f] sm:text-base">
+                  <span className="text-[10px] text-[#6b2b2b]">{step.number}</span>
+                  <h3 className="text-sm font-medium text-[#2a211b] sm:text-base">
                     {step.title}
                   </h3>
                   <p className="text-xs font-light leading-6 text-muted-foreground sm:text-sm">
@@ -211,17 +212,17 @@ export default function AboutPage() {
 
       <section className="flex flex-col gap-10 py-20 sm:py-28 lg:flex-row lg:items-end lg:justify-between">
         <Reveal>
-          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#9b5e3b]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#6b2b2b]">
             Workshop · Bwejuu
           </p>
-          <h2 className="mt-6 max-w-[10ch] text-[clamp(3rem,5vw,5.2rem)] font-medium leading-[0.92] tracking-[-0.06em] text-[#11130f]">
+          <h2 className="mt-6 max-w-[18ch] text-3xl sm:text-4xl font-medium leading-tight tracking-[-0.02em] text-[#2a211b]">
             Come and see how the work takes shape.
           </h2>
         </Reveal>
         <Reveal delay={120}>
           <Link
             href="/contact?request=I would like to discuss a furniture project."
-            className="group inline-flex min-h-14 w-fit items-center gap-8 bg-[#263228] px-6 text-xs font-bold text-[#f1eee6] transition duration-300 hover:-translate-y-1 hover:bg-[#11130f]"
+            className="group inline-flex min-h-14 w-fit items-center gap-8 bg-[#6b2b2b] px-6 text-xs font-bold text-[#f6f0e6] transition duration-300 hover:-translate-y-1 hover:bg-[#2a211b]"
           >
             Plan your visit
             <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, ChevronLeft, ChevronRight, ImageIcon } from "lucide-react"
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react"
 import { fetchApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { formatPrice } from "@/lib/data"
@@ -74,24 +74,15 @@ export function OffersBannerCarousel() {
   }
 
   if (loading) {
-    return <div className="aspect-[16/7] min-h-[280px] animate-pulse rounded-lg bg-secondary sm:min-h-[360px]" />
+    return <div className="sf-skeleton aspect-[16/7] max-h-[420px] min-h-[220px] w-full" />
   }
 
-  if (!banners.length) {
-    return (
-      <section className="flex aspect-[16/7] min-h-[280px] items-center justify-center rounded-lg border border-border bg-secondary px-6 text-center sm:min-h-[360px]">
-        <div>
-          <ImageIcon className="mx-auto size-8 text-primary" aria-hidden="true" />
-          <h1 className="mt-3 text-xl font-bold text-foreground">New offers are being prepared</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Please check back soon.</p>
-        </div>
-      </section>
-    )
-  }
+  // Without active offer banners the page goes straight to the discounted products.
+  if (!banners.length) return null
 
   return (
     <section
-      className="relative aspect-[16/7] min-h-[300px] overflow-hidden rounded-lg bg-primary shadow-elevated sm:min-h-[390px] lg:min-h-[500px]"
+      className="relative aspect-[16/7] max-h-[420px] min-h-[220px] w-full overflow-hidden rounded-lg bg-header"
       aria-roledescription="carousel"
       aria-label="Current furniture offers"
       onMouseEnter={() => setPaused(true)}
@@ -122,9 +113,9 @@ export function OffersBannerCarousel() {
           <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/5" />
           <div className="relative flex h-full max-w-2xl flex-col justify-center px-6 py-10 text-white sm:px-10 lg:px-14">
             <p className="text-xs font-bold uppercase tracking-widest text-white/80 sm:text-sm">{banner.title}</p>
-            <h1 className="mt-3 text-balance text-3xl font-bold leading-tight sm:text-5xl lg:text-6xl">
+            <h2 className="mt-2 text-balance text-2xl font-bold leading-tight text-white sm:text-4xl">
               {banner.headline || banner.title}
-            </h1>
+            </h2>
             {(banner.price != null || Number(banner.discountPercentage) > 0) && (
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 {Number(banner.discountPercentage) > 0 && (

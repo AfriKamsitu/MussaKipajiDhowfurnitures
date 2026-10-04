@@ -367,7 +367,7 @@ export function AddProductForm() {
                 value={form.colors}
                 onChange={(event) => update("colors", event.target.value)}
                 className={inputCls}
-                placeholder="#3b2f2a, Brown, Natural"
+                placeholder="#2a211b, Brown, Natural"
               />
             </div>
             <div className="grid grid-cols-3 gap-3">

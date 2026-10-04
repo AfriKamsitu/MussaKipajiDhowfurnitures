@@ -39,6 +39,11 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --color-brand-sage: var(--brand-sage);
+  --color-header: var(--header);
+  --color-header-muted: var(--header-muted);
+  --color-deal: var(--deal);
+  --color-success: var(--success);
+  --color-star: var(--star);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -50,78 +55,85 @@
 
 :root {
   color-scheme: light;
-  /* White-led canvas with walnut and sea-sage brand accents. */
+  /* Storefront palette: white canvas, espresso text, burgundy actions, soft grey surfaces. */
   --background: #ffffff;
-  --foreground: #303126;
+  --foreground: #2a211b;
   --card: #ffffff;
-  --card-foreground: #303126;
+  --card-foreground: #2a211b;
   --popover: #ffffff;
-  --popover-foreground: #303126;
-  --primary: #5d6248;
+  --popover-foreground: #2a211b;
+  --primary: #6b2b2b;
   --primary-foreground: #ffffff;
-  --secondary: #f1f3eb;
-  --secondary-foreground: #303126;
-  --muted: #f5f3ed;
-  --muted-foreground: #6c6257;
-  --accent: #8a6348;
+  --secondary: #f4f3f1;
+  --secondary-foreground: #2a211b;
+  --muted: #f6f5f3;
+  --muted-foreground: #6b6560;
+  --accent: #531f1f;
   --accent-foreground: #ffffff;
-  --brand-sage: #6f7659;
+  --brand-sage: #6f7d5c;
+  --header: #2a211b;
+  --header-muted: #3b3028;
+  --deal: #6b2b2b;
+  --success: #3f6b3a;
+  --star: #d9892b;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: #e3e4dc;
-  --input: #d9d1c7;
-  --ring: #5d6248;
-  --chart-1: #5d6248;
-  --chart-2: #59654c;
-  --chart-3: #a57858;
-  --chart-4: #9aa58b;
-  --chart-5: #303126;
-  --radius: 0.625rem;
+  --border: #e8e6e2;
+  --input: #d3d0cb;
+  --ring: #6b2b2b;
+  --chart-1: #6b2b2b;
+  --chart-2: #a35d4f;
+  --chart-3: #c9a27e;
+  --chart-4: #8c8780;
+  --chart-5: #2a211b;
+  --radius: 0.125rem;
+  --site-header-height: 56px;
   --sidebar: #ffffff;
-  --sidebar-foreground: #303126;
-  --sidebar-primary: #5d6248;
+  --sidebar-foreground: #2a211b;
+  --sidebar-primary: #6b2b2b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f2f4ef;
-  --sidebar-accent-foreground: #303126;
-  --sidebar-border: #e2ddd5;
-  --sidebar-ring: #5d6248;
+  --sidebar-accent: #f4f3f1;
+  --sidebar-accent-foreground: #2a211b;
+  --sidebar-border: #e8e6e2;
+  --sidebar-ring: #6b2b2b;
 }
 
-/* Admin uses the same logo palette on a quieter operational canvas. */
+/* Admin shares the storefront palette (white, espresso, burgundy) on a soft grey working canvas. */
 .admin-theme {
+  --radius: 0.125rem;
   --font-admin: 'Alibaba Sans', 'Alibaba PuHuiTi', 'HarmonyOS Sans', 'Helvetica Neue', Arial, sans-serif;
   --font-heading: var(--font-admin);
-  --background: #f7f7f5;
-  --foreground: #303126;
-  --card: rgb(255 255 255 / 0.94);
-  --card-foreground: #303126;
+  --background: #f6f5f3;
+  --foreground: #2a211b;
+  --card: #ffffff;
+  --card-foreground: #2a211b;
   --popover: #ffffff;
-  --popover-foreground: #303126;
-  --primary: #5d6248;
+  --popover-foreground: #2a211b;
+  --primary: #6b2b2b;
   --primary-foreground: #ffffff;
-  --secondary: #f2f4ef;
-  --secondary-foreground: #303126;
-  --muted: #f3f1ed;
-  --muted-foreground: #6c6257;
-  --accent: #8a6348;
+  --secondary: #f4f3f1;
+  --secondary-foreground: #2a211b;
+  --muted: #f1efec;
+  --muted-foreground: #6b6560;
+  --accent: #531f1f;
   --accent-foreground: #ffffff;
-  --brand-sage: #6f7659;
+  --brand-sage: #6f7d5c;
   --destructive: oklch(0.58 0.22 25);
-  --border: #e2ddd5;
-  --input: #d7cfc5;
-  --ring: #5d6248;
-  --chart-1: #5d6248;
-  --chart-2: #59654c;
-  --chart-3: #a57858;
-  --chart-4: #9aa58b;
-  --chart-5: #303126;
-  --sidebar: rgb(255 255 255 / 0.96);
-  --sidebar-foreground: #303126;
-  --sidebar-primary: #5d6248;
+  --border: #e8e6e2;
+  --input: #d3d0cb;
+  --ring: #6b2b2b;
+  --chart-1: #6b2b2b;
+  --chart-2: #a35d4f;
+  --chart-3: #c9a27e;
+  --chart-4: #8c8780;
+  --chart-5: #2a211b;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #2a211b;
+  --sidebar-primary: #6b2b2b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f2f4ef;
-  --sidebar-accent-foreground: #303126;
-  --sidebar-border: #e2ddd5;
-  --sidebar-ring: #5d6248;
+  --sidebar-accent: #f4f3f1;
+  --sidebar-accent-foreground: #2a211b;
+  --sidebar-border: #e8e6e2;
+  --sidebar-ring: #6b2b2b;
   font-family: var(--font-admin);
   font-feature-settings:
     'kern' 1,
@@ -138,14 +150,11 @@
 .admin-theme h5,
 .admin-theme h6 {
   font-family: var(--font-admin);
-  letter-spacing: -0.025em;
+  letter-spacing: -0.01em;
 }
 
 .admin-workspace {
-  background:
-    radial-gradient(circle at 92% 0%, rgb(197 162 116 / 0.12), transparent 24rem),
-    radial-gradient(circle at 10% 16%, rgb(93 98 72 / 0.08), transparent 28rem),
-    #f5f6f2;
+  background: #f6f5f3;
 }
 
 .admin-glass {
@@ -156,19 +165,15 @@
 
 .admin-panel {
   background: #ffffff;
-  box-shadow:
-    0 1px 2px rgb(40 25 18 / 0.035),
-    0 14px 34px -26px rgb(40 25 18 / 0.22);
+  box-shadow: 0 1px 2px rgb(42 33 27 / 0.04);
   transition:
     box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
     border-color 180ms ease;
 }
 
 .admin-panel:hover {
-  border-color: rgb(93 98 72 / 0.24);
-  box-shadow:
-    0 2px 8px rgb(40 25 18 / 0.045),
-    0 18px 40px -28px rgb(40 25 18 / 0.25);
+  border-color: rgb(107 43 43 / 0.28);
+  box-shadow: 0 4px 14px -8px rgb(42 33 27 / 0.2);
 }
 
 .admin-dashboard-hero > img {
@@ -214,10 +219,6 @@
     overflow-x: hidden;
     font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
     text-rendering: optimizeLegibility;
-    background-image:
-      radial-gradient(circle at 7% -4%, rgb(93 98 72 / 0.065), transparent 28rem),
-      radial-gradient(circle at 94% 10%, rgb(180 174 132 / 0.06), transparent 30rem);
-    background-attachment: fixed;
   }
   html {
     @apply font-sans;
@@ -234,7 +235,7 @@
   }
 
   ::selection {
-    background: rgb(93 98 72 / 0.2);
+    background: rgb(107 43 43 / 0.18);
     color: var(--foreground);
   }
 
@@ -257,7 +258,7 @@
       0 18px 40px -12px rgb(40 25 18 / 0.2);
   }
   .shadow-accent-glow {
-    box-shadow: 0 10px 30px -8px rgb(93 98 72 / 0.32);
+    box-shadow: 0 10px 30px -8px rgb(107 43 43 / 0.28);
   }
 
   .shadow-premium {

@@ -1,0 +1,402 @@
+/*
+ * Storefront design system: shared primitives for every buyer-facing page.
+ * Colour tokens live in globals.css (:root); admin keeps its own .admin-theme.
+ */
+
+@media (min-width: 1024px) {
+  :root {
+    --site-header-height: 64px;
+  }
+}
+
+@layer components {
+/* ---- Layout ---- */
+.sf-container {
+  width: 100%;
+  max-width: 1240px;
+  margin-inline: auto;
+  padding-inline: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .sf-container { padding-inline: 1.25rem; }
+}
+
+@media (min-width: 1024px) {
+  .sf-container { padding-inline: 2rem; }
+}
+
+.sf-sticky-below-header {
+  position: sticky;
+  top: calc(var(--site-header-height) + 1rem);
+}
+
+/* ---- Surfaces ---- */
+.sf-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.sf-shadow {
+  box-shadow:
+    0 1px 2px rgb(42 33 27 / 0.04),
+    0 8px 24px -16px rgb(42 33 27 / 0.18);
+}
+
+/* ---- Buttons ---- */
+.sf-btn {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0;
+  padding: 0.5rem 1.5rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  line-height: 1.3;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.sf-btn:disabled,
+.sf-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.sf-btn-sm {
+  min-height: 2.25rem;
+  padding: 0.375rem 1rem;
+  font-size: 0.625rem;
+}
+
+.sf-btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.sf-btn-primary:hover:not(:disabled) {
+  background: var(--accent);
+}
+
+.sf-btn-dark {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.sf-btn-dark:hover:not(:disabled) {
+  background: #1b1511;
+}
+
+.sf-btn-outline {
+  border-color: var(--foreground);
+  background: var(--card);
+  color: var(--foreground);
+}
+
+.sf-btn-outline:hover:not(:disabled) {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.sf-btn-ghost {
+  background: transparent;
+  color: var(--foreground);
+}
+
+.sf-btn-ghost:hover:not(:disabled) {
+  background: var(--secondary);
+}
+
+/* ---- Form controls ---- */
+.sf-input {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  background: var(--card);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--foreground);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.sf-input::placeholder {
+  color: color-mix(in srgb, var(--muted-foreground) 75%, transparent);
+}
+
+.sf-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+  outline: none;
+}
+
+.sf-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+/* ---- Product card ---- */
+.sf-product-card {
+  transition:
+    border-color 180ms ease,
+    box-shadow 220ms ease;
+}
+
+.sf-product-card .sf-zoom {
+  transition: transform 500ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .sf-product-card:hover .sf-zoom {
+    transform: scale(1.045);
+  }
+}
+
+/* ---- Skeleton ---- */
+.sf-skeleton {
+  border-radius: calc(var(--radius) * 0.75);
+  background: linear-gradient(100deg, #efeeeb 30%, #f7f6f4 50%, #efeeeb 70%);
+  background-size: 220% 100%;
+  animation: sf-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes sf-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+
+/* ---- Overlays ---- */
+.sf-drawer-enter-left {
+  animation: sf-slide-left 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sf-drawer-enter-bottom {
+  animation: sf-slide-bottom 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.sf-fade-in {
+  animation: sf-fade 180ms ease both;
+}
+
+.sf-toast-enter {
+  animation: sf-toast 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes sf-slide-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes sf-slide-bottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes sf-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes sf-toast {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+body.sf-scroll-locked {
+  overflow: hidden;
+}
+
+/* Horizontal product rails snap without showing a scrollbar. */
+.sf-rail {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-padding-inline: 0.25rem;
+}
+
+.sf-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.sf-rail > * {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-skeleton,
+  .sf-drawer-enter-left,
+  .sf-drawer-enter-bottom,
+  .sf-fade-in,
+  .sf-toast-enter {
+    animation: none;
+  }
+
+  .sf-product-card .sf-zoom {
+    transition: none;
+  }
+
+  .sf-product-card:hover .sf-zoom {
+    transform: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
+}
+
+/* ---- Minimal homepage ---- */
+.home-announce-track {
+  animation: home-announce 36s linear infinite;
+}
+
+@keyframes home-announce {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-50%, 0, 0); }
+}
+
+.home-slide {
+  transition: opacity 900ms ease;
+}
+
+.home-slide-image {
+  transition: transform 7s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-announce-track {
+    animation: none;
+  }
+
+  .home-slide,
+  .home-slide-image {
+    transition: none;
+  }
+}
+
+/* ---- Product motion ---- */
+/*
+ * Scroll-in: cards fade and rise as they enter the viewport. This is a pure CSS
+ * scroll-driven animation, so products are never hidden waiting on JavaScript;
+ * browsers without support simply show the cards. It animates `translate` and
+ * so never fights the hover lift on `transform`.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .sf-product-card {
+      animation: sf-card-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+
+    .sf-reveal {
+      animation: sf-card-rise linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+
+    /* Inside a horizontal shelf, cards arrive as the shelf is scrolled sideways. */
+    .sf-rail .sf-product-card {
+      animation-name: sf-card-slide;
+      animation-timeline: view(inline);
+      animation-range: entry 0% entry 90%;
+    }
+  }
+}
+
+@keyframes sf-card-rise {
+  from { opacity: 0; translate: 0 28px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes sf-card-slide {
+  from { opacity: 0; translate: 24px 0; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+/* The quick-add bar appears on hover; touch devices go through the product page. */
+.sf-quick-add {
+  opacity: 0;
+  transition:
+    opacity 200ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.sf-product-card:hover .sf-quick-add,
+.sf-quick-add:focus-visible,
+.sf-quick-add[data-state="added"] {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .sf-quick-add {
+    display: none;
+  }
+}
+
+/* Saving a product: the heart pops once. */
+.sf-heart-pop {
+  animation: sf-heart-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes sf-heart-pop {
+  0% { transform: scale(0.6); }
+  55% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* Add to cart: the button presses in, and the confirmation tick springs in. */
+.sf-press:active:not(:disabled) {
+  transform: scale(0.96);
+  transition: transform 90ms ease;
+}
+
+.sf-check-pop {
+  animation: sf-check-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes sf-check-pop {
+  from { opacity: 0; transform: scale(0.3) rotate(-25deg); }
+  to { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-product-card {
+    transform: none;
+    transition: none;
+  }
+
+  .sf-heart-pop,
+  .sf-check-pop {
+    animation: none;
+  }
+
+  .sf-press:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* Room inside horizontal rails so a lifted card is not clipped by the scroller. */
+.sf-rail {
+  margin-top: -8px;
+  padding-top: 8px;
+}

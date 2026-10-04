@@ -1,49 +1,89 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import Image from "next/image"
+import { SafeImage as Image } from "@/components/safe-image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { ArrowLeft, CheckCircle2, Loader2, MessageCircle, Minus, PencilLine, Plus, Trash2, Truck } from "lucide-react"
+import { CheckCircle2, Loader2, Minus, PencilLine, Plus, Trash2 } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { EmptyState } from "@/components/state-panels"
 import { useStore } from "@/components/store-provider"
 import { useStoreSettings } from "@/components/store-settings-provider"
 import { WhatsAppGlyph } from "@/components/whatsapp-glyph"
 import { fetchApi } from "@/lib/api"
+import { productHref } from "@/lib/catalog"
 import { formatPrice } from "@/lib/data"
+import { deliveryFee, type FulfillmentMethod } from "@/lib/pricing"
+import { cn } from "@/lib/utils"
 import { orderWhatsAppMessage, whatsappUrl } from "@/lib/whatsapp"
 
-const inputClass = "min-h-11 w-full rounded-xl border border-border bg-card px-3.5 py-2.5 text-sm shadow-[inset_0_1px_2px_rgba(40,25,18,0.03)] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-muted-foreground focus:border-primary/55 focus:bg-white focus:ring-4 focus:ring-primary/10"
-type CheckoutDetails = { firstName: string; lastName: string; email: string; phone: string; address: string; city: string; region: string }
-const emptyDetails: CheckoutDetails = { firstName: "", lastName: "", email: "", phone: "", address: "", city: "", region: "" }
+type CheckoutDetails = {
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  address: string
+  city: string
+  region: string
+}
+
+type ConfirmedOrder = {
+  orderNumber: string
+  status: string
+  payment: string
+  shippingAddress: string
+  subtotal: number
+  delivery: number
+  total: number
+  items: { id: string; name: string; image: string; quantity: number; price: number }[]
+  whatsappLink: string
+  whatsappOpened: boolean
+}
+
+const emptyDetails: CheckoutDetails = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  region: "",
+}
+
+/** Same rule the backend enforces on CreateOrderRequest.phone. */
+// Brackets and the dash are escaped because browsers compile `pattern` with the RegExp `v` flag.
+const PHONE_PATTERN = "[+0-9 \\(\\)\\-]{7,30}"
 
 export function CheckoutView() {
-  const storeSettings = useStoreSettings()
+  const settings = useStoreSettings()
+  const { currency } = settings
   const router = useRouter()
   const pathname = usePathname()
-  const { cart, cartTotal, clearCart, removeFromCart, updateQuantity } = useStore()
+  const { cart, cartTotal, hydrated, clearCart, removeFromCart, updateQuantity } = useStore()
   const { user, loading, addOrder } = useAuth()
-  const [placed, setPlaced] = useState(false)
+  const [confirmed, setConfirmed] = useState<ConfirmedOrder | null>(null)
   const [saving, setSaving] = useState(false)
   const [reviewing, setReviewing] = useState(false)
   const [details, setDetails] = useState<CheckoutDetails>(emptyDetails)
   const [detailsReady, setDetailsReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [fulfillmentMethod, setFulfillmentMethod] = useState<"DELIVERY" | "PICKUP">("DELIVERY")
+  const [fulfillmentMethod, setFulfillmentMethod] = useState<FulfillmentMethod>("DELIVERY")
   const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery")
+  // One key per checkout attempt: a retry after a network failure returns the same order.
   const submissionKeyRef = useRef<string | null>(null)
   const submissionInFlightRef = useRef(false)
-  const freeDelivery = storeSettings.freeShippingThreshold > 0 && cartTotal >= storeSettings.freeShippingThreshold
-  const estimatedDelivery = fulfillmentMethod === "PICKUP" || freeDelivery ? 0 : storeSettings.flatShippingRate
+
+  const estimatedDelivery = deliveryFee(settings, cartTotal, fulfillmentMethod)
   const total = cartTotal + estimatedDelivery
-  const resolvedPaymentMethods = useMemo(() => {
+  const paymentMethods = useMemo(() => {
     const methods = [
-      ...(storeSettings.cashOnDeliveryEnabled ? ["Cash on Delivery"] : []),
-      ...(storeSettings.bankTransferEnabled ? ["Bank Transfer"] : []),
+      ...(settings.cashOnDeliveryEnabled ? ["Cash on Delivery"] : []),
+      ...(settings.bankTransferEnabled ? ["Bank Transfer"] : []),
     ]
     return methods.length ? methods : ["WhatsApp confirmation"]
-  }, [storeSettings.bankTransferEnabled, storeSettings.cashOnDeliveryEnabled])
+  }, [settings.bankTransferEnabled, settings.cashOnDeliveryEnabled])
 
+  // The cart lives in this browser, so it is still here after signing in.
   useEffect(() => {
     if (!loading && !user) router.replace(`/login?redirect=${encodeURIComponent(pathname || "/checkout")}`)
   }, [loading, pathname, router, user])
@@ -51,13 +91,26 @@ export function CheckoutView() {
   useEffect(() => {
     if (!user || detailsReady) return
     const [firstName = "", ...lastNameParts] = user.name.trim().split(/\s+/)
-    setDetails({ ...emptyDetails, firstName, lastName: lastNameParts.join(" "), email: user.email, phone: user.phone || "" })
+    const saved = user.addresses.find((address) => address.isDefault) ?? user.addresses[0]
+    setDetails({
+      firstName,
+      lastName: lastNameParts.join(" "),
+      email: user.email,
+      phone: saved?.phone || user.phone || "",
+      address: saved?.street ?? "",
+      city: saved?.city ?? "",
+      region: saved?.region ?? "",
+    })
     setDetailsReady(true)
   }, [detailsReady, user])
 
   useEffect(() => {
-    if (!resolvedPaymentMethods.includes(paymentMethod)) setPaymentMethod(resolvedPaymentMethods[0])
-  }, [paymentMethod, resolvedPaymentMethods])
+    if (!paymentMethods.includes(paymentMethod)) setPaymentMethod(paymentMethods[0])
+  }, [paymentMethod, paymentMethods])
+
+  useEffect(() => {
+    if (!settings.storePickupEnabled && fulfillmentMethod === "PICKUP") setFulfillmentMethod("DELIVERY")
+  }, [fulfillmentMethod, settings.storePickupEnabled])
 
   function updateDetail(field: keyof CheckoutDetails, value: string) {
     setDetails((current) => ({ ...current, [field]: value }))
@@ -65,18 +118,21 @@ export function CheckoutView() {
 
   function handleReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!user) {
-      router.replace(`/login?redirect=${encodeURIComponent(pathname || "/checkout")}`)
-      return
-    }
-    if (user.role === "admin") {
-      router.replace("/admin")
-      return
-    }
     setError(null)
     setReviewing(true)
-    window.scrollTo({ top: 0, behavior: "smooth" })
+    window.scrollTo({ top: 0 })
   }
+
+  const pickupAddress = [settings.addressLine1, settings.addressLine2, settings.city, settings.country]
+    .filter(Boolean)
+    .join(", ")
+  const shippingAddress =
+    fulfillmentMethod === "PICKUP"
+      ? `Store pickup at ${pickupAddress}`
+      : [details.address, details.city, details.region]
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .join(", ")
 
   async function placeOrder() {
     if (!user || user.role === "admin" || cart.length === 0 || submissionInFlightRef.current) return
@@ -85,9 +141,7 @@ export function CheckoutView() {
     submissionKeyRef.current = submissionKey
     const customerName = `${details.firstName} ${details.lastName}`.trim()
     const phone = details.phone.trim()
-    const shippingAddress = fulfillmentMethod === "PICKUP"
-      ? `Store pickup at ${[storeSettings.addressLine1, storeSettings.addressLine2, storeSettings.city, storeSettings.country].filter(Boolean).join(", ")}`
-      : [details.address, details.city, details.region].map((value) => value.trim()).filter(Boolean).join(", ")
+    // Opened during the click so popup blockers allow it; filled in once the order is saved.
     const whatsappWindow = window.open("about:blank", "paje-dhow-order")
     setSaving(true)
     setError(null)
@@ -104,143 +158,455 @@ export function CheckoutView() {
           idempotencyKey: submissionKey,
           items: cart.map((item) => {
             const numericId = Number(item.product.id)
-            return { productId: Number.isInteger(numericId) && numericId > 0 ? numericId : null, name: item.product.name, image: item.product.image, price: item.product.price, quantity: item.quantity }
+            return {
+              productId: Number.isInteger(numericId) && numericId > 0 ? numericId : null,
+              name: item.product.name,
+              image: item.product.image,
+              price: item.product.price,
+              quantity: item.quantity,
+            }
           }),
         }),
       })
-      const orderNumber = String(created.orderNumber || created.id || "New order")
-      const createdAt = String(created.createdAt || new Date().toISOString())
-      const confirmedItems = Array.isArray(created.items)
+
+      // Everything shown from here on is what the backend recorded, not the local estimate.
+      const orderNumber = String(created.orderNumber || created.id || "")
+      const items = Array.isArray(created.items)
         ? (created.items as Record<string, unknown>[]).map((item) => {
-            const productId = String(item.productId ?? "")
-            const cartProduct = cart.find((entry) => entry.product.id === productId)?.product
-            return { id: productId, name: String(item.name ?? cartProduct?.name ?? "Product"), image: String(item.image ?? cartProduct?.image ?? "/placeholder.svg"), quantity: Number(item.quantity ?? 1), price: Number(item.price ?? 0), productUrl: `/product/${cartProduct?.slug || productId}` }
+            const id = String(item.productId ?? "")
+            const cartProduct = cart.find((entry) => entry.product.id === id)?.product
+            return {
+              id,
+              name: String(item.name ?? cartProduct?.name ?? "Product"),
+              image: String(item.image ?? cartProduct?.image ?? "/placeholder.svg"),
+              quantity: Number(item.quantity ?? 1),
+              price: Number(item.price ?? 0),
+              productUrl: cartProduct ? productHref(cartProduct) : `/product/${id}`,
+            }
           })
-        : cart.map((item) => ({ id: item.product.id, name: item.product.name, image: item.product.image, quantity: item.quantity, price: item.product.price, productUrl: `/product/${item.product.slug || item.product.id}` }))
-      const confirmedSubtotal = Number(created.subtotal ?? confirmedItems.reduce((sum, item) => sum + item.price * item.quantity, 0))
-      const confirmedTotal = Number(created.total ?? confirmedSubtotal)
-      const confirmedDelivery = Number(created.delivery ?? Math.max(0, confirmedTotal - confirmedSubtotal))
-      addOrder({ id: orderNumber, date: createdAt, status: "Pending", total: confirmedTotal, items: confirmedItems.map(({ name, image, quantity, price }) => ({ name, image, quantity, price })) })
-      const message = orderWhatsAppMessage({ orderNumber, customerName, customerEmail: user.email, phone, shippingAddress, items: confirmedItems, productTotal: confirmedSubtotal, deliveryFee: confirmedDelivery, orderTotal: confirmedTotal, formatAmount: (amount) => formatPrice(amount, storeSettings.currency) })
-      const destination = whatsappUrl(message)
+        : []
+      const subtotal = Number(created.subtotal ?? items.reduce((sum, item) => sum + item.price * item.quantity, 0))
+      const orderTotal = Number(created.total ?? subtotal)
+      const delivery = Number(created.delivery ?? Math.max(0, orderTotal - subtotal))
+
+      addOrder({
+        id: orderNumber,
+        date: String(created.createdAt || new Date().toISOString()),
+        status: "Pending",
+        total: orderTotal,
+        items: items.map(({ name, image, quantity, price }) => ({ name, image, quantity, price })),
+      })
+
+      const whatsappLink = whatsappUrl(
+        orderWhatsAppMessage({
+          orderNumber,
+          customerName,
+          customerEmail: user.email,
+          phone,
+          shippingAddress,
+          items,
+          productTotal: subtotal,
+          deliveryFee: delivery,
+          orderTotal,
+          formatAmount: (amount) => formatPrice(amount, currency),
+        }),
+      )
       if (whatsappWindow) {
         whatsappWindow.opener = null
-        whatsappWindow.location.href = destination
-      } else window.location.href = destination
-      setPlaced(true)
+        whatsappWindow.location.href = whatsappLink
+      }
+
+      setConfirmed({
+        orderNumber,
+        status: String(created.status ?? "PENDING"),
+        payment: String(created.payment ?? paymentMethod),
+        shippingAddress: String(created.shippingAddress ?? shippingAddress),
+        subtotal,
+        delivery,
+        total: orderTotal,
+        items,
+        whatsappLink,
+        whatsappOpened: Boolean(whatsappWindow),
+      })
       submissionKeyRef.current = null
       clearCart()
-      window.setTimeout(() => router.push("/account/orders"), 3500)
+      window.scrollTo({ top: 0 })
     } catch (err) {
       whatsappWindow?.close()
-      setError(err instanceof Error ? err.message : "The order could not be saved. Please try again.")
+      setError(
+        err instanceof Error
+          ? `${err.message} Your order was not placed.`
+          : "The order could not be saved. Please try again.",
+      )
     } finally {
       submissionInFlightRef.current = false
       setSaving(false)
     }
   }
 
-  if (loading || !user) return <div className="surface-premium rounded-3xl p-12 text-center text-sm text-muted-foreground">Please login or register before placing an order.</div>
-  if (user.role === "admin") return (
-    <div className="surface-premium rounded-3xl p-10 text-center sm:p-14">
-      <h2 className="text-xl font-black text-foreground">Admin accounts cannot place buyer orders.</h2>
-      <p className="mt-2 text-sm text-muted-foreground">Use a customer account for shopping, or manage orders from the admin panel.</p>
-      <Link href="/admin" className="mt-5 inline-flex rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground hover:bg-accent">Go to Admin Panel</Link>
-    </div>
-  )
-  if (placed) return (
-    <div className="surface-premium flex flex-col items-center justify-center gap-4 rounded-3xl px-6 py-20 text-center">
-      <span className="flex size-16 items-center justify-center rounded-full bg-secondary text-primary"><CheckCircle2 className="size-8" /></span>
-      <h2 className="text-2xl font-bold text-foreground">Order Placed!</h2>
-      <p className="max-w-sm text-sm text-muted-foreground">Your order is saved and WhatsApp has opened with every product and image link. Redirecting to your orders...</p>
-      <Link href="/shop" className="mt-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-accent">Continue Shopping</Link>
-    </div>
-  )
-  if (cart.length === 0) return (
-    <div className="surface-premium flex flex-col items-center justify-center gap-4 rounded-3xl px-6 py-20 text-center">
-      <h2 className="text-xl font-semibold text-foreground">Your cart is empty</h2>
-      <p className="text-sm text-muted-foreground">Add items before checking out.</p>
-      <Link href="/shop" className="mt-2 rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground transition-colors hover:bg-accent">Browse Products</Link>
-    </div>
-  )
+  if (confirmed) {
+    return (
+      <section aria-labelledby="order-confirmed" className="sf-card mx-auto max-w-2xl p-5 sm:p-8">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="mt-0.5 size-7 shrink-0 text-success" aria-hidden="true" />
+          <div>
+            <h2 id="order-confirmed" className="text-xl font-bold text-foreground">
+              Order placed
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Order <span className="font-bold text-foreground">{confirmed.orderNumber}</span> is saved with status{" "}
+              <span className="font-bold capitalize text-foreground">{confirmed.status.toLowerCase()}</span>.
+              {" "}The store will contact you to confirm delivery and payment.
+            </p>
+          </div>
+        </div>
+
+        <ul className="mt-5 divide-y divide-border border-y border-border">
+          {confirmed.items.map((item) => (
+            <li key={item.id} className="flex items-center gap-3 py-3">
+              <span className="relative size-14 shrink-0 overflow-hidden rounded-md bg-secondary">
+                <Image src={item.image || "/placeholder.svg"} alt="" fill sizes="56px" className="object-cover" />
+              </span>
+              <span className="min-w-0 flex-1 text-sm">
+                <span className="line-clamp-1 font-semibold text-foreground">{item.name}</span>
+                <span className="text-muted-foreground">Qty {item.quantity}</span>
+              </span>
+              <span className="text-sm font-semibold text-foreground">
+                {formatPrice(item.price * item.quantity, currency)}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <dl className="mt-4 space-y-1.5 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">Subtotal</dt>
+            <dd className="font-semibold">{formatPrice(confirmed.subtotal, currency)}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">Delivery</dt>
+            <dd className="font-semibold">
+              {confirmed.delivery > 0 ? formatPrice(confirmed.delivery, currency) : "Free"}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4 text-base">
+            <dt className="font-bold">Total</dt>
+            <dd className="font-bold">{formatPrice(confirmed.total, currency)}</dd>
+          </div>
+          <div className="flex justify-between gap-4 border-t border-border pt-2">
+            <dt className="text-muted-foreground">Payment</dt>
+            <dd className="font-semibold">{confirmed.payment}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="shrink-0 text-muted-foreground">Deliver to</dt>
+            <dd className="text-right font-semibold">{confirmed.shippingAddress}</dd>
+          </div>
+        </dl>
+
+        <div className="mt-6 grid gap-2 sm:grid-cols-2">
+          <a
+            href={confirmed.whatsappLink}
+            target="_blank"
+            rel="noreferrer"
+            className="sf-btn bg-[#1a9d4c] text-white hover:bg-[#15803d]"
+          >
+            <WhatsAppGlyph className="size-4" />
+            {confirmed.whatsappOpened ? "Open WhatsApp again" : "Send order on WhatsApp"}
+          </a>
+          <Link href="/account/orders" className="sf-btn sf-btn-outline">
+            Track this order
+          </Link>
+        </div>
+        <Link href="/shop" className="sf-btn sf-btn-ghost mt-2 w-full">
+          Continue shopping
+        </Link>
+      </section>
+    )
+  }
+
+  if (loading || !user || !hydrated) {
+    return (
+      <div role="status" className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
+        <span className="sr-only">{loading || !hydrated ? "Loading checkout" : "Redirecting to sign in"}</span>
+        <div className="sf-skeleton h-80" />
+        <div className="sf-skeleton h-64" />
+      </div>
+    )
+  }
+
+  if (user.role === "admin") {
+    return (
+      <EmptyState
+        title="Admin accounts cannot place orders"
+        description="Use a customer account for shopping, or manage orders from the admin panel."
+      >
+        <Link href="/admin" className="sf-btn sf-btn-primary">
+          Go to admin panel
+        </Link>
+      </EmptyState>
+    )
+  }
+
+  if (cart.length === 0) {
+    return (
+      <EmptyState title="Your cart is empty" description="Add furniture to your cart before checking out.">
+        <Link href="/shop" className="sf-btn sf-btn-primary">
+          Shop furniture
+        </Link>
+      </EmptyState>
+    )
+  }
+
+  const fulfillmentOptions = [
+    {
+      value: "DELIVERY" as const,
+      label: "Delivery",
+      detail: settings.estimatedDeliveryDays > 0 ? `About ${settings.estimatedDeliveryDays} days` : "",
+    },
+    { value: "PICKUP" as const, label: "Store pickup", detail: pickupAddress },
+  ]
 
   return (
-    <form onSubmit={handleReview} className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-      <div className="grid gap-6">
+    <form onSubmit={handleReview} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+      <div className="grid gap-5">
+        <ol className="flex items-center gap-2 text-sm" aria-label="Checkout steps">
+          {["Your details", "Review & place order"].map((step, index) => {
+            const active = Number(reviewing) === index
+            return (
+              <li key={step} className="flex items-center gap-2" aria-current={active ? "step" : undefined}>
+                {index > 0 && <span className="h-px w-6 bg-input" aria-hidden="true" />}
+                <span
+                  className={cn(
+                    "grid size-6 place-items-center rounded-full text-xs font-bold",
+                    active || (reviewing && index === 0)
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground",
+                  )}
+                >
+                  {index + 1}
+                </span>
+                <span className={cn(active ? "font-bold text-foreground" : "text-muted-foreground")}>{step}</span>
+              </li>
+            )
+          })}
+        </ol>
+
         {!reviewing ? (
-          <section className="surface-premium rounded-2xl p-5 sm:p-7">
-            <h2 className="flex items-center gap-2 text-xl font-black text-foreground"><span className="flex size-10 items-center justify-center rounded-full bg-accent/10 text-accent"><Truck className="size-5" /></span> Shipping Information</h2>
-            {storeSettings.storePickupEnabled && (
-              <fieldset className="mt-4 grid gap-3 sm:grid-cols-2">
-                <legend className="sr-only">Choose delivery or pickup</legend>
-                {[
-                  { value: "DELIVERY" as const, label: "Delivery", detail: `Usually ${storeSettings.estimatedDeliveryDays} days` },
-                  { value: "PICKUP" as const, label: "Store pickup", detail: "Collect from the workshop" },
-                ].map((option) => (
-                  <label key={option.value} className={`cursor-pointer rounded-lg border p-4 ${fulfillmentMethod === option.value ? "border-primary bg-primary/5" : "border-border bg-background"}`}>
-                    <input type="radio" name="fulfillmentMethod" value={option.value} checked={fulfillmentMethod === option.value} onChange={() => setFulfillmentMethod(option.value)} className="mr-2 accent-[var(--primary)]" />
-                    <span className="text-sm font-semibold text-foreground">{option.label}</span>
-                    <span className="mt-1 block pl-6 text-xs text-muted-foreground">{option.detail}</span>
+          <>
+            <section className="sf-card p-4 sm:p-6" aria-labelledby="checkout-delivery">
+              <h2 id="checkout-delivery" className="text-base font-bold text-foreground sm:text-lg">
+                Delivery
+              </h2>
+              {settings.storePickupEnabled && (
+                <fieldset className="mt-3 grid gap-2 sm:grid-cols-2">
+                  <legend className="sr-only">Choose delivery or pickup</legend>
+                  {fulfillmentOptions.map((option) => (
+                    <label
+                      key={option.value}
+                      className={cn(
+                        "flex cursor-pointer gap-2.5 rounded-lg border p-3",
+                        fulfillmentMethod === option.value ? "border-primary bg-primary/5" : "border-input",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="fulfillmentMethod"
+                        value={option.value}
+                        checked={fulfillmentMethod === option.value}
+                        onChange={() => setFulfillmentMethod(option.value)}
+                        className="mt-1 accent-[var(--primary)]"
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-sm font-bold text-foreground">{option.label}</span>
+                        {option.detail && (
+                          <span className="block text-xs text-muted-foreground">{option.detail}</span>
+                        )}
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+              )}
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <label className="sf-label">
+                  First name
+                  <input required name="firstName" autoComplete="given-name" maxLength={50} className="sf-input mt-1 font-normal" value={details.firstName} onChange={(event) => updateDetail("firstName", event.target.value)} />
+                </label>
+                <label className="sf-label">
+                  Last name
+                  <input required name="lastName" autoComplete="family-name" maxLength={49} className="sf-input mt-1 font-normal" value={details.lastName} onChange={(event) => updateDetail("lastName", event.target.value)} />
+                </label>
+                <label className="sf-label">
+                  Email
+                  <input name="email" type="email" readOnly className="sf-input mt-1 bg-secondary font-normal text-muted-foreground" value={details.email} />
+                </label>
+                <label className="sf-label">
+                  Phone
+                  <input required name="phone" type="tel" autoComplete="tel" pattern={PHONE_PATTERN} title="7 to 30 digits; you may include +, spaces, brackets and dashes" className="sf-input mt-1 font-normal" value={details.phone} onChange={(event) => updateDetail("phone", event.target.value)} placeholder="+255 700 000 000" />
+                </label>
+                {fulfillmentMethod === "DELIVERY" && (
+                  <>
+                    <label className="sf-label sm:col-span-2">
+                      Address
+                      <input required name="address" autoComplete="street-address" maxLength={250} className="sf-input mt-1 font-normal" value={details.address} onChange={(event) => updateDetail("address", event.target.value)} placeholder="Street, building or village" />
+                    </label>
+                    <label className="sf-label">
+                      City
+                      <input required name="city" autoComplete="address-level2" maxLength={100} className="sf-input mt-1 font-normal" value={details.city} onChange={(event) => updateDetail("city", event.target.value)} />
+                    </label>
+                    <label className="sf-label">
+                      Region
+                      <input required name="region" autoComplete="address-level1" maxLength={100} className="sf-input mt-1 font-normal" value={details.region} onChange={(event) => updateDetail("region", event.target.value)} />
+                    </label>
+                  </>
+                )}
+              </div>
+            </section>
+
+            <section className="sf-card p-4 sm:p-6" aria-labelledby="checkout-payment">
+              <h2 id="checkout-payment" className="text-base font-bold text-foreground sm:text-lg">
+                Payment
+              </h2>
+              <fieldset className="mt-3 grid gap-2 sm:grid-cols-2">
+                <legend className="sr-only">Payment method</legend>
+                {paymentMethods.map((method) => (
+                  <label
+                    key={method}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2.5 rounded-lg border p-3 text-sm font-bold text-foreground",
+                      paymentMethod === method ? "border-primary bg-primary/5" : "border-input",
+                    )}
+                  >
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value={method}
+                      checked={paymentMethod === method}
+                      onChange={() => setPaymentMethod(method)}
+                      className="accent-[var(--primary)]"
+                    />
+                    {method}
                   </label>
                 ))}
               </fieldset>
-            )}
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="text-sm font-medium text-foreground">First Name<input required name="firstName" className={`${inputClass} mt-1.5`} value={details.firstName} onChange={(event) => updateDetail("firstName", event.target.value)} placeholder="John" /></label>
-              <label className="text-sm font-medium text-foreground">Last Name<input required name="lastName" className={`${inputClass} mt-1.5`} value={details.lastName} onChange={(event) => updateDetail("lastName", event.target.value)} placeholder="Doe" /></label>
-              <label className="text-sm font-medium text-foreground">Email<input required name="email" type="email" className={`${inputClass} mt-1.5`} value={details.email} readOnly /></label>
-              <label className="text-sm font-medium text-foreground">Phone<input required name="phone" type="tel" className={`${inputClass} mt-1.5`} value={details.phone} onChange={(event) => updateDetail("phone", event.target.value)} placeholder="+255 700 000 000" /></label>
-              {fulfillmentMethod === "DELIVERY" && <>
-                <label className="text-sm font-medium text-foreground sm:col-span-2">Address<input required name="address" className={`${inputClass} mt-1.5`} value={details.address} onChange={(event) => updateDetail("address", event.target.value)} placeholder="Street or village" /></label>
-                <label className="text-sm font-medium text-foreground">City<input required name="city" className={`${inputClass} mt-1.5`} value={details.city} onChange={(event) => updateDetail("city", event.target.value)} placeholder="Bwejuu" /></label>
-                <label className="text-sm font-medium text-foreground">Region<input required name="region" className={`${inputClass} mt-1.5`} value={details.region} onChange={(event) => updateDetail("region", event.target.value)} placeholder="Zanzibar" /></label>
-              </>}
-            </div>
-          </section>
+              <p className="mt-3 text-xs text-muted-foreground">
+                No payment is taken on this website. After you place the order, WhatsApp opens so the store can confirm
+                availability, delivery and payment with you.
+              </p>
+            </section>
+          </>
         ) : (
-          <section className="surface-premium rounded-2xl border-primary/30 p-6 shadow-elevated">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div><p className="text-sm font-semibold uppercase tracking-[0.12em] text-primary">Final review</p><h2 className="mt-1 text-xl font-semibold text-foreground">Check your order before sending</h2><p className="mt-2 text-sm text-muted-foreground">Nothing has been placed yet. You can still edit your details or products.</p></div>
-              <button type="button" onClick={() => setReviewing(false)} className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:border-primary hover:text-primary"><PencilLine className="size-4" /> Edit details</button>
+          <section className="sf-card p-4 sm:p-6" aria-labelledby="checkout-review">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 id="checkout-review" className="text-base font-bold text-foreground sm:text-lg">
+                  Review your order
+                </h2>
+                <p className="mt-0.5 text-sm text-muted-foreground">Nothing has been placed yet.</p>
+              </div>
+              <button type="button" onClick={() => setReviewing(false)} className="sf-btn sf-btn-outline sf-btn-sm">
+                <PencilLine className="size-4" aria-hidden="true" /> Edit details
+              </button>
             </div>
-            <dl className="mt-6 grid gap-x-8 gap-y-4 border-t border-border pt-5 text-sm sm:grid-cols-2">
-              <div><dt className="text-muted-foreground">Customer</dt><dd className="mt-1 font-medium text-foreground">{details.firstName} {details.lastName}</dd></div>
-              <div><dt className="text-muted-foreground">Phone</dt><dd className="mt-1 font-medium text-foreground">{details.phone}</dd></div>
-              <div><dt className="text-muted-foreground">Email</dt><dd className="mt-1 break-words font-medium text-foreground">{details.email}</dd></div>
-              <div><dt className="text-muted-foreground">{fulfillmentMethod === "PICKUP" ? "Collection" : "Delivery address"}</dt><dd className="mt-1 font-medium text-foreground">{fulfillmentMethod === "PICKUP" ? "Store pickup" : [details.address, details.city, details.region].filter(Boolean).join(", ")}</dd></div>
-              <div><dt className="text-muted-foreground">Payment</dt><dd className="mt-1 font-medium text-foreground">{paymentMethod}</dd></div>
+            <dl className="mt-4 grid gap-x-8 gap-y-3 border-t border-border pt-4 text-sm sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">Customer</dt>
+                <dd className="font-semibold text-foreground">{details.firstName} {details.lastName}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Phone</dt>
+                <dd className="font-semibold text-foreground">{details.phone}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Email</dt>
+                <dd className="break-words font-semibold text-foreground">{details.email}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">{fulfillmentMethod === "PICKUP" ? "Collection" : "Delivery address"}</dt>
+                <dd className="font-semibold text-foreground">{shippingAddress}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Payment</dt>
+                <dd className="font-semibold text-foreground">{paymentMethod}</dd>
+              </div>
             </dl>
           </section>
         )}
-        <section className="surface-premium rounded-2xl p-5 sm:p-7">
-          <h2 className="flex items-center gap-2 text-xl font-black text-foreground"><span className="flex size-10 items-center justify-center rounded-full bg-[#25D366]/12 text-[#169c47]"><MessageCircle className="size-5" /></span> Confirm Order on WhatsApp</h2>
-          <fieldset className="mt-4 grid gap-3 sm:grid-cols-2">
-            <legend className="mb-2 text-sm font-semibold text-foreground">Payment method</legend>
-            {resolvedPaymentMethods.map((method) => <label key={method} className={`cursor-pointer rounded-lg border px-4 py-3 text-sm ${paymentMethod === method ? "border-primary bg-primary/5" : "border-border"}`}><input type="radio" name="paymentMethod" value={method} checked={paymentMethod === method} onChange={() => setPaymentMethod(method)} className="mr-2 accent-[var(--primary)]" /><span className="font-semibold text-foreground">{method}</span></label>)}
-          </fieldset>
-          <div className="mt-5 rounded-xl border border-[#25D366]/30 bg-[#25D366]/8 p-4 sm:p-5"><div className="flex items-start gap-3"><span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white shadow-lg"><WhatsAppGlyph className="size-6" /></span><div><p className="font-bold text-foreground">No online payment is required on the website.</p><p className="mt-1 text-sm leading-relaxed text-muted-foreground">After your final review, WhatsApp opens with every product and your delivery details so the shop can confirm availability, delivery, and payment directly with you.</p></div></div></div>
-        </section>
       </div>
 
-      <div className="surface-premium h-fit rounded-2xl p-5 shadow-premium sm:p-6 lg:sticky lg:top-40">
-        <div className="flex items-start justify-between gap-3"><div><p className="eyebrow">Order summary</p><h2 className="mt-1 text-xl font-black text-foreground">Your order</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">Change quantities or remove products before confirmation.</p></div><Link href="/cart" className="shrink-0 rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary hover:text-primary-foreground">Edit cart</Link></div>
-        <div className="mt-4 grid gap-4">
-          {cart.map((item) => (
-            <div key={item.product.id} className="grid grid-cols-[56px_minmax(0,1fr)_auto] items-center gap-3 border-b border-border pb-4 last:border-0 last:pb-0">
-              <div className="relative size-14 shrink-0 overflow-hidden rounded-xl bg-secondary"><Image src={item.product.image || "/placeholder.svg"} alt={item.product.name} fill sizes="56px" className="object-cover" /></div>
-              <div className="min-w-0"><span className="line-clamp-2 text-sm font-medium text-foreground">{item.product.name}</span><div className="mt-2 flex w-fit items-center rounded-md border border-border"><button type="button" onClick={() => updateQuantity(item.product.id, item.quantity - 1)} aria-label={`Decrease ${item.product.name} quantity`} className="flex size-7 items-center justify-center transition-colors hover:bg-secondary"><Minus className="size-3" /></button><span className="w-8 text-center text-xs font-semibold">{item.quantity}</span><button type="button" onClick={() => updateQuantity(item.product.id, item.quantity + 1)} disabled={item.product.stock != null && item.quantity >= item.product.stock} aria-label={`Increase ${item.product.name} quantity`} className="flex size-7 items-center justify-center transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-40"><Plus className="size-3" /></button></div></div>
-              <div className="flex h-full flex-col items-end justify-between gap-2"><button type="button" onClick={() => removeFromCart(item.product.id)} aria-label={`Remove ${item.product.name} from order`} className="text-muted-foreground transition-colors hover:text-destructive"><Trash2 className="size-4" /></button><span className="whitespace-nowrap text-sm font-semibold text-primary">{formatPrice(item.product.price * item.quantity, storeSettings.currency)}</span></div>
-            </div>
-          ))}
+      <aside aria-label="Order summary" className="sf-card sf-sticky-below-header p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-bold text-foreground">Order summary</h2>
+          <Link href="/cart" className="text-[13px] font-semibold text-primary hover:underline">
+            Edit cart
+          </Link>
         </div>
-        <dl className="mt-5 grid gap-3 border-t border-border pt-4 text-sm">
-          <div className="flex justify-between"><dt className="text-muted-foreground">Subtotal</dt><dd className="font-medium text-foreground">{formatPrice(cartTotal, storeSettings.currency)}</dd></div>
-          <div className="flex justify-between"><dt className="text-muted-foreground">Delivery</dt><dd className="text-right font-medium text-foreground">{fulfillmentMethod === "PICKUP" ? "Store pickup" : estimatedDelivery === 0 ? "Free" : formatPrice(estimatedDelivery, storeSettings.currency)}</dd></div>
-          <div className="mt-1 flex justify-between border-t border-border pt-3 text-base"><dt className="font-semibold text-foreground">Total</dt><dd className="font-bold text-primary">{formatPrice(total, storeSettings.currency)}</dd></div>
+        <ul className="mt-3 divide-y divide-border">
+          {cart.map((item) => (
+            <li key={item.product.id} className="flex gap-3 py-3">
+              <span className="relative size-14 shrink-0 overflow-hidden rounded-md bg-secondary">
+                <Image src={item.product.image || "/placeholder.svg"} alt="" fill sizes="56px" className="object-cover" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="line-clamp-2 text-sm font-semibold text-foreground">{item.product.name}</p>
+                <div className="mt-1.5 flex items-center gap-2">
+                  <div role="group" aria-label={`Quantity of ${item.product.name}`} className="flex items-center border border-input">
+                    <button type="button" onClick={() => updateQuantity(item.product.id, item.quantity - 1)} aria-label="Decrease quantity" className="grid size-8 place-items-center hover:bg-secondary">
+                      <Minus className="size-3" />
+                    </button>
+                    <span className="w-6 text-center text-xs font-bold">{item.quantity}</span>
+                    <button type="button" onClick={() => updateQuantity(item.product.id, item.quantity + 1)} disabled={item.product.stock != null && item.quantity >= item.product.stock} aria-label="Increase quantity" className="grid size-8 place-items-center hover:bg-secondary disabled:opacity-40">
+                      <Plus className="size-3" />
+                    </button>
+                  </div>
+                  <button type="button" onClick={() => removeFromCart(item.product.id)} aria-label={`Remove ${item.product.name}`} className="grid size-8 place-items-center text-muted-foreground hover:bg-secondary hover:text-deal">
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              </div>
+              <span className="shrink-0 text-sm font-semibold text-foreground">
+                {formatPrice(item.product.price * item.quantity, currency)}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <dl className="space-y-2 border-t border-border pt-3 text-sm">
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">Subtotal</dt>
+            <dd className="font-semibold text-foreground">{formatPrice(cartTotal, currency)}</dd>
+          </div>
+          <div className="flex justify-between gap-4">
+            <dt className="text-muted-foreground">{fulfillmentMethod === "PICKUP" ? "Store pickup" : "Delivery"}</dt>
+            <dd className="font-semibold text-foreground">
+              {estimatedDelivery > 0 ? formatPrice(estimatedDelivery, currency) : "Free"}
+            </dd>
+          </div>
+          <div className="flex justify-between gap-4 border-t border-border pt-3 text-base">
+            <dt className="font-bold text-foreground">Total</dt>
+            <dd className="font-bold text-foreground">{formatPrice(total, currency)}</dd>
+          </div>
         </dl>
-        {error && <p role="alert" className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}
-        {reviewing ? <><button type="button" onClick={placeOrder} disabled={saving} className="mt-5 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-[#25D366] px-6 py-3 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:bg-[#1ebe5b] disabled:cursor-not-allowed disabled:opacity-60">{saving ? <Loader2 className="size-4 animate-spin" /> : <WhatsAppGlyph className="size-4" />}{saving ? "Saving Order..." : "Confirm Order on WhatsApp"}</button><button type="button" onClick={() => setReviewing(false)} className="mt-3 flex w-full items-center justify-center gap-2 py-2 text-sm font-bold text-muted-foreground transition-colors hover:text-primary"><ArrowLeft className="size-4" /> Return to edit details</button></> : <button type="submit" className="mt-5 flex min-h-12 w-full items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-accent-glow transition-all hover:-translate-y-0.5 hover:bg-accent">Review Order</button>}
-      </div>
+
+        {error && (
+          <p role="alert" className="mt-3 rounded-md bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+
+        {reviewing ? (
+          <button type="button" onClick={placeOrder} disabled={saving} className="sf-btn sf-btn-primary mt-4 w-full">
+            {saving && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+            {saving ? "Placing order…" : "Place order"}
+          </button>
+        ) : (
+          <button type="submit" className="sf-btn sf-btn-primary mt-4 w-full">
+            Review order
+          </button>
+        )}
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          The final total is confirmed by the store when the order is placed.
+        </p>
+      </aside>
     </form>
   )
 }

@@ -127,14 +127,25 @@ function MaintenanceScreen({ settings }: { settings: PublicStoreSettings }) {
   )
 }
 
-export function StoreSettingsProvider({ children }: { children: ReactNode }) {
+export function StoreSettingsProvider({
+  children,
+  initialSettings,
+}: {
+  children: ReactNode
+  /** Settings read on the server; lets the first render show real content. */
+  initialSettings?: Partial<PublicStoreSettings> | null
+}) {
   const pathname = usePathname()
   const { user, loading: authLoading } = useAuth()
-  const [settings, setSettings] = useState(defaultStoreSettings)
-  const [resolved, setResolved] = useState(false)
+  const [settings, setSettings] = useState<PublicStoreSettings>(() => ({
+    ...defaultStoreSettings,
+    ...(initialSettings ?? {}),
+  }))
+  const [resolved, setResolved] = useState(Boolean(initialSettings))
 
   useEffect(() => {
     let active = true
+    if (initialSettings?.whatsappNumber) setRuntimeWhatsappNumber(initialSettings.whatsappNumber)
     fetchApi<PublicStoreSettings>("/api/config/store")
       .then((data) => {
         if (active) {
@@ -162,6 +173,7 @@ export function StoreSettingsProvider({ children }: { children: ReactNode }) {
       active = false
       window.removeEventListener("store-settings-updated", handleSettingsUpdated)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- initial settings are a first-render seed only
   }, [])
 
   const value = useMemo(() => settings, [settings])
@@ -172,7 +184,7 @@ export function StoreSettingsProvider({ children }: { children: ReactNode }) {
 
   return (
     <StoreSettingsContext.Provider value={value}>
-      {(!resolved || authLoading) && !bypassMaintenance ? (
+      {(!resolved || (settings.maintenanceMode && authLoading)) && !bypassMaintenance ? (
         <div className="grid min-h-screen place-items-center bg-background">
           <div className="size-8 animate-spin rounded-full border-2 border-primary/20 border-t-primary" aria-label="Loading store" />
         </div>

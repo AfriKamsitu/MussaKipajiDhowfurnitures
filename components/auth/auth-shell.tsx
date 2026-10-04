@@ -121,7 +121,7 @@ export function AuthShell({
   }
 
   return (
-    <main id="main-content" className="relative min-h-screen overflow-hidden bg-[#171b17]">
+    <main id="main-content" className="relative min-h-screen overflow-hidden bg-[#2a211b]">
       <div className="fixed inset-0" aria-hidden="true">
         {backgroundImages.map((background, index) => (
           <Image
@@ -139,7 +139,7 @@ export function AuthShell({
             )}
           />
         ))}
-        <div className="absolute inset-0 bg-[#171b17]/64" />
+        <div className="absolute inset-0 bg-[#2a211b]/64" />
       </div>
 
       <div className="relative z-10 grid min-h-screen lg:grid-cols-[minmax(0,1.05fr)_minmax(470px,0.95fr)]">
@@ -177,10 +177,10 @@ export function AuthShell({
           </div>
         </div>
 
-        <div className="flex min-h-screen items-center justify-center bg-white px-0 py-0 sm:bg-[#f5f6f2]/96 sm:px-8 sm:py-8 lg:px-10 lg:py-12">
+        <div className="flex min-h-screen items-center justify-center bg-white px-0 py-0 sm:bg-[#f6f5f3]/96 sm:px-8 sm:py-8 lg:px-10 lg:py-12">
           <div
             className={cn(
-              "reveal-scale min-h-screen w-full max-w-md rounded-none border-0 bg-white p-5 pt-7 shadow-none sm:min-h-0 sm:rounded-[1.5rem] sm:border sm:border-border/80 sm:p-8 sm:shadow-[0_28px_80px_-34px_rgba(17,19,15,0.42)]",
+              "reveal-scale min-h-screen w-full max-w-md rounded-lg border-0 bg-white p-5 pt-7 shadow-none sm:min-h-0 sm:rounded-[1.5rem] sm:border sm:border-border/80 sm:p-8 sm:shadow-[0_28px_80px_-34px_rgba(17,19,15,0.42)]",
               panelClassName,
             )}
           >

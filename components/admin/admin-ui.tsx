@@ -14,8 +14,8 @@ export function AdminPageHeader({
   return (
     <div className="admin-enter mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-        <nav className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+        <h1 className="text-2xl font-light tracking-[0.01em] text-foreground sm:text-[1.75rem]">{title}</h1>
+        <nav className="mt-1 flex items-center gap-1.5 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
           {breadcrumb.map((crumb, i) => (
             <span key={crumb} className="flex items-center gap-1.5">
               {i > 0 && <ChevronRight className="size-3.5" />}
@@ -103,7 +103,7 @@ export function PrimaryButton({
   className?: string
 }) {
   const cls = cn(
-    "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-[0_8px_22px_-14px_rgb(117_75_51_/_0.8)] transition-[background-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_12px_26px_-14px_rgb(117_75_51_/_0.9)] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0",
+    "inline-flex min-h-11 items-center justify-center gap-2 bg-primary px-5 py-2 text-[11px] font-medium uppercase tracking-[0.16em] text-primary-foreground shadow-[0_8px_22px_-14px_rgb(107_43_43_/_0.8)] transition-[background-color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:bg-primary/90 hover:shadow-[0_12px_26px_-14px_rgb(107_43_43_/_0.9)] active:translate-y-0 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0",
     className,
   )
   if (href) {

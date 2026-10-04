@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { AuthShell } from "@/components/auth/auth-shell"
+import { Suspense } from "react"
 import { RegisterForm } from "@/components/auth/register-form"
 
 export const metadata: Metadata = {
@@ -20,7 +21,9 @@ export default function RegisterPage() {
         "/showroom.png",
       ]}
     >
-      <RegisterForm />
+      <Suspense fallback={null}>
+        <RegisterForm />
+      </Suspense>
     </AuthShell>
   )
 }

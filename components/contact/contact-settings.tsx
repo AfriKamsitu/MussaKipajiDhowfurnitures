@@ -9,28 +9,6 @@ function telephoneHref(value: string) {
   return `tel:${value.replace(/[^\d+]/g, "")}`
 }
 
-export function ContactHeroActions() {
-  const settings = useStoreSettings()
-  return (
-    <div className="mt-8 flex flex-wrap gap-3">
-      <a
-        href={whatsappUrl("Hello Paje Dhow Furniture, I would like to discuss furniture with your team.")}
-        target="_blank"
-        rel="noreferrer"
-        className="interactive-press inline-flex min-h-12 items-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-semibold text-white transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-[#20bd5a]"
-      >
-        <WhatsAppGlyph className="size-4" /> WhatsApp us
-      </a>
-      <a
-        href={telephoneHref(settings.storePhone)}
-        className="interactive-press inline-flex min-h-12 items-center gap-2 rounded-full border border-white/50 bg-black/20 px-5 py-3 text-sm font-semibold text-white backdrop-blur-sm transition-[background-color,color,transform] hover:-translate-y-0.5 hover:bg-white hover:text-primary"
-      >
-        <Phone className="size-4" /> Call the workshop
-      </a>
-    </div>
-  )
-}
-
 export function ContactChannels() {
   const settings = useStoreSettings()
   const channels = [

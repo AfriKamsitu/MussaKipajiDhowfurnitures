@@ -8,6 +8,14 @@ const WISHLIST_KEY = "furnicraft.wishlist"
 const RECENTLY_VIEWED_KEY = "furnicraft.recently-viewed"
 const RECENTLY_VIEWED_LIMIT = 8
 
+function save(key: string, value: unknown) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value))
+  } catch {
+    // Storage can be full or blocked; the in-memory cart keeps working.
+  }
+}
+
 function load<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") return fallback
   try {
@@ -29,8 +37,33 @@ function cartLimit(product: Product) {
   return Math.max(0, Math.floor(product.stock))
 }
 
+/** The most recent successful add-to-cart, shown as a confirmation toast. */
+export type CartNotice = {
+  product: Product
+  quantity: number
+  /** True when stock capped the cart below the requested quantity. */
+  limited: boolean
+  at: number
+}
+
+function readCart(): CartItem[] {
+  return load<CartItem[]>(CART_KEY, [])
+    .map((item) => ({
+      ...item,
+      quantity: Math.min(
+        cartLimit(item.product),
+        Math.max(0, Math.floor(Number(item.quantity) || 0)),
+      ),
+    }))
+    .filter((item) => item.product?.id && item.quantity > 0)
+}
+
 type StoreContextValue = {
   cart: CartItem[]
+  /** False until the saved cart has been read; totals are not final before that. */
+  hydrated: boolean
+  cartNotice: CartNotice | null
+  dismissCartNotice: () => void
   wishlist: Product[]
   recentlyViewed: Product[]
   cartCount: number
@@ -52,20 +85,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [wishlist, setWishlist] = useState<Product[]>([])
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([])
   const [hydrated, setHydrated] = useState(false)
+  const [cartNotice, setCartNotice] = useState<CartNotice | null>(null)
 
   // Hydrate from localStorage after mount to avoid SSR mismatch.
   useEffect(() => {
-    setCart(
-      load<CartItem[]>(CART_KEY, [])
-        .map((item) => ({
-          ...item,
-          quantity: Math.min(
-            cartLimit(item.product),
-            Math.max(0, Math.floor(Number(item.quantity) || 0)),
-          ),
-        }))
-        .filter((item) => item.product?.id && item.quantity > 0),
-    )
+    setCart(readCart())
     setWishlist(load<Product[]>(WISHLIST_KEY, []))
     setRecentlyViewed(
       load<Product[]>(RECENTLY_VIEWED_KEY, [])
@@ -76,24 +100,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (hydrated) window.localStorage.setItem(CART_KEY, JSON.stringify(cart))
+    if (hydrated) save(CART_KEY, cart)
   }, [cart, hydrated])
 
   useEffect(() => {
-    if (hydrated) window.localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist))
+    if (hydrated) save(WISHLIST_KEY, wishlist)
   }, [wishlist, hydrated])
 
   useEffect(() => {
-    if (hydrated) {
-      window.localStorage.setItem(RECENTLY_VIEWED_KEY, JSON.stringify(recentlyViewed))
-    }
+    if (hydrated) save(RECENTLY_VIEWED_KEY, recentlyViewed)
   }, [recentlyViewed, hydrated])
 
+  // Keep the cart and saved items consistent across open tabs.
+  useEffect(() => {
+    function handleStorage(event: StorageEvent) {
+      if (event.key === CART_KEY) setCart(readCart())
+      if (event.key === WISHLIST_KEY) setWishlist(load<Product[]>(WISHLIST_KEY, []))
+    }
+    window.addEventListener("storage", handleStorage)
+    return () => window.removeEventListener("storage", handleStorage)
+  }, [])
+
   function addToCart(product: Product, quantity = 1, color?: string) {
+    const requested = Math.max(1, Math.floor(quantity))
+    const limit = cartLimit(product)
+    if (limit === 0) return
+    const inCart = cart.find((item) => item.product.id === product.id)?.quantity ?? 0
+    const added = Math.min(limit, inCart + requested) - inCart
+    setCartNotice({ product, quantity: added, limited: added < requested, at: Date.now() })
     setCart((prev) => {
-      const requested = Math.max(1, Math.floor(quantity))
-      const limit = cartLimit(product)
-      if (limit === 0) return prev
       const existing = prev.find((item) => item.product.id === product.id)
       if (existing) {
         return prev.map((item) =>
@@ -151,8 +186,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     ].slice(0, RECENTLY_VIEWED_LIMIT))
   }, [])
 
+  const dismissCartNotice = useCallback(() => setCartNotice(null), [])
+
   const value: StoreContextValue = {
     cart,
+    hydrated,
+    cartNotice,
+    dismissCartNotice,
     wishlist,
     recentlyViewed,
     cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
