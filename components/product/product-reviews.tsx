@@ -163,7 +163,7 @@ export function ProductReviews({ product }: { product: Product }) {
           ) : (
             <>
               <p className="mt-1 text-xs text-muted-foreground">
-                Reviews are open to customers whose order of this product has been delivered.
+                Reviews are open to customers who have received this product.
               </p>
               <fieldset className="mt-3">
                 <legend className="sf-label">Your rating</legend>

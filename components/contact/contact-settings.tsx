@@ -31,7 +31,7 @@ export function ContactChannels() {
       title: "WhatsApp",
       value: "Start a conversation",
       detail: "The quickest way to discuss furniture and orders",
-      href: whatsappUrl("Hello Paje Dhow Furniture, I would like to discuss furniture with your team."),
+      href: whatsappUrl("Hello Kipaji Dhow Furniture, I would like to discuss furniture with your team."),
     },
   ]
 

@@ -50,8 +50,8 @@ export function ProductCard({
   const categoryName =
     categories.find((category) => category.slug === product.category)?.name
     ?? product.category.replace(/-/g, " ")
-  // Admin accounts cannot shop, so the quick-add control is not offered to them.
-  const canQuickAdd = available && user?.role !== "admin"
+  // Admin accounts cannot shop, so the cart control is not offered to them.
+  const isAdmin = user?.role === "admin"
 
   useEffect(() => {
     if (!added) return
@@ -94,29 +94,6 @@ export function ProductCard({
           <Heart className={cn("size-4", wished && "sf-heart-pop fill-current")} />
         </button>
 
-        {canQuickAdd && (
-          <button
-            type="button"
-            data-state={added ? "added" : "idle"}
-            onClick={() => {
-              addToCart(product, minimumOrder, product.colors[0])
-              setAdded(true)
-            }}
-            aria-label={added ? `${product.name} added to cart` : `Add ${product.name} to cart`}
-            className={cn(
-              "sf-quick-add sf-press absolute inset-x-2.5 bottom-2.5 z-10 flex min-h-10 items-center justify-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.18em]",
-              added ? "bg-foreground text-background" : "bg-white/95 text-foreground hover:bg-foreground hover:text-background",
-            )}
-          >
-            {added ? (
-              <>
-                <Check className="sf-check-pop size-3.5" aria-hidden="true" /> Added
-              </>
-            ) : (
-              "Add to cart"
-            )}
-          </button>
-        )}
       </div>
 
       <div className="pt-3">
@@ -150,6 +127,43 @@ export function ProductCard({
           <p className="mt-1 text-[11px] text-muted-foreground">Min. order {minimumOrder}</p>
         )}
       </div>
+
+      {/* Always visible, so phones and tablets (no hover) can add from any listing. */}
+      {!isAdmin && (
+        <div className="relative z-10 mt-auto pt-3">
+          <button
+            type="button"
+            disabled={!available}
+            onClick={() => {
+              addToCart(product, minimumOrder, product.colors[0])
+              setAdded(true)
+            }}
+            aria-label={
+              !available
+                ? `${product.name} is sold out`
+                : added
+                  ? `${product.name} added to cart`
+                  : `Add ${product.name} to cart`
+            }
+            className={cn(
+              "sf-press flex min-h-10 w-full items-center justify-center gap-1.5 border text-[10px] font-medium uppercase tracking-[0.18em] transition-colors disabled:cursor-not-allowed disabled:border-border disabled:text-foreground/40",
+              added
+                ? "border-foreground bg-foreground text-background"
+                : "border-foreground text-foreground enabled:hover:bg-foreground enabled:hover:text-background",
+            )}
+          >
+            {!available ? (
+              "Sold out"
+            ) : added ? (
+              <>
+                <Check className="sf-check-pop size-3.5" aria-hidden="true" /> Added
+              </>
+            ) : (
+              "Add to cart"
+            )}
+          </button>
+        </div>
+      )}
     </article>
   )
 }

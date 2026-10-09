@@ -16,7 +16,7 @@ import { useStoreSettings } from "@/components/store-settings-provider"
 import { WhatsAppGlyph } from "@/components/whatsapp-glyph"
 import { discountPercent, hasReviews, isAvailable, listProducts, productHref } from "@/lib/catalog"
 import { formatPrice, type Product } from "@/lib/data"
-import { deliveryFee } from "@/lib/pricing"
+import { deliveryFee, OFFERS_DELIVERY } from "@/lib/pricing"
 import { cn } from "@/lib/utils"
 import { openWhatsApp, productEnquiryMessage } from "@/lib/whatsapp"
 
@@ -155,26 +155,34 @@ export function ProductDetail({
     </dl>
   )
 
+  const titleBlock = (
+    <>
+      <h1 className="text-xl font-bold leading-snug tracking-[-0.015em] text-foreground sm:text-2xl">
+        {product.name}
+      </h1>
+
+      {hasReviews(product) && (
+        <a href="#reviews" className="mt-1.5 inline-flex items-center gap-2 text-sm text-primary hover:underline">
+          <StarRating rating={product.rating} size="md" />
+          {product.rating.toFixed(1)} · {product.reviews} {product.reviews === 1 ? "review" : "reviews"}
+        </a>
+      )}
+    </>
+  )
+
   return (
     <div className="space-y-6 sm:space-y-8">
+      {/* Phones and tablets lead with the name, then the pictures, then price and buying controls. */}
+      <div className="lg:hidden">{titleBlock}</div>
       <section className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:gap-8 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.95fr)_300px]">
         <div className="lg:sticky lg:top-[calc(var(--site-header-height)+1rem)] lg:self-start">
           <ProductGallery key={product.id} images={gallery} name={product.name} />
         </div>
 
         <div className="min-w-0">
-          <h1 className="text-xl font-bold leading-snug tracking-[-0.015em] text-foreground sm:text-2xl">
-            {product.name}
-          </h1>
+          <div className="hidden lg:block">{titleBlock}</div>
 
-          {hasReviews(product) && (
-            <a href="#reviews" className="mt-1.5 inline-flex items-center gap-2 text-sm text-primary hover:underline">
-              <StarRating rating={product.rating} size="md" />
-              {product.rating.toFixed(1)} · {product.reviews} {product.reviews === 1 ? "review" : "reviews"}
-            </a>
-          )}
-
-          <div className="mt-3 border-t border-border pt-3">
+          <div className="border-border lg:mt-3 lg:border-t lg:pt-3">
             <p className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
               {discount && <span className="text-xl font-bold text-deal sm:text-2xl">-{discount}%</span>}
               <span className="text-2xl font-bold text-foreground sm:text-3xl">
@@ -229,10 +237,11 @@ export function ProductDetail({
           aria-label="Purchase options"
           className="sf-card h-fit p-4 lg:col-span-2 xl:sticky xl:top-[calc(var(--site-header-height)+1rem)] xl:col-span-1"
         >
-          <p className="text-xl font-bold text-foreground">{formatPrice(product.price, settings.currency)}</p>
+          {/* Below xl the price already sits directly above this box. */}
+          <p className="hidden text-xl font-bold text-foreground xl:block">{formatPrice(product.price, settings.currency)}</p>
           <p
             className={cn(
-              "mt-1 text-base font-bold",
+              "text-base font-bold xl:mt-1",
               availability.tone === "in" && "text-success",
               availability.tone === "low" && "text-[#a8601a]",
               availability.tone === "out" && "text-deal",
@@ -242,7 +251,7 @@ export function ProductDetail({
           </p>
 
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            {deliveryDays > 0 && (
+            {OFFERS_DELIVERY && deliveryDays > 0 && (
               <li className="flex gap-2">
                 <Truck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
                 <span>
@@ -253,17 +262,17 @@ export function ProductDetail({
                 </span>
               </li>
             )}
-            {settings.storePickupEnabled && (
+            {(settings.storePickupEnabled || !OFFERS_DELIVERY) && (
               <li className="flex gap-2">
                 <Store className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
-                Store pickup available
+                {OFFERS_DELIVERY ? "Store pickup available" : "Collect from our store"}
               </li>
             )}
             {(settings.cashOnDeliveryEnabled || settings.bankTransferEnabled) && (
               <li className="flex gap-2">
                 <Banknote className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden="true" />
                 {[
-                  settings.cashOnDeliveryEnabled && "Cash on delivery",
+                  settings.cashOnDeliveryEnabled && (OFFERS_DELIVERY ? "Cash on delivery" : "Pay on collection"),
                   settings.bankTransferEnabled && "Bank transfer",
                 ]
                   .filter(Boolean)

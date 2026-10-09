@@ -1,10 +1,14 @@
 package com.pajedhow.backend.service;
 
 import com.pajedhow.backend.dto.DashboardDtos.*;
+import com.pajedhow.backend.entity.Category;
+import com.pajedhow.backend.entity.Order;
+import com.pajedhow.backend.entity.OrderItem;
 import com.pajedhow.backend.entity.Product;
 import com.pajedhow.backend.entity.Role;
 import com.pajedhow.backend.entity.enums.Enums.OrderStatus;
 import com.pajedhow.backend.entity.enums.Enums.ProductStatus;
+import com.pajedhow.backend.repository.CategoryRepository;
 import com.pajedhow.backend.repository.OrderRepository;
 import com.pajedhow.backend.repository.ProductRepository;
 import com.pajedhow.backend.repository.UserRepository;
@@ -16,9 +20,20 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.time.DateTimeException;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.TextStyle;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,6 +44,10 @@ public class DashboardService {
     private final UserRepository userRepository;
     private final ActivityLogService activityLogService;
     private final SystemSettingsService settingsService;
+    private final CategoryRepository categoryRepository;
+
+    private static final int SALES_DAYS = 7;
+    private static final int INSIGHT_WINDOW_DAYS = 90;
 
     @Transactional(readOnly = true)
     public DashboardResponse overview() {
@@ -61,6 +80,103 @@ public class DashboardService {
 
         return new DashboardResponse(revenue, totalOrders, totalCustomers, totalProducts,
                 stats, breakdown, topSelling, recent);
+    }
+
+    /**
+     * Chart data computed from orders: revenue per day for the last week, and
+     * revenue by category plus best sellers over the last 90 days. Cancelled
+     * orders are left out of every figure.
+     */
+    @Transactional(readOnly = true)
+    public DashboardInsights insights() {
+        ZoneId zone = storeZone();
+        Instant now = Instant.now();
+        LocalDate today = LocalDate.ofInstant(now, zone);
+
+        List<Order> window = orderRepository
+                .findForReport(now.minus(INSIGHT_WINDOW_DAYS, ChronoUnit.DAYS), now.plus(1, ChronoUnit.DAYS))
+                .stream()
+                .filter(order -> order.getStatus() != OrderStatus.CANCELLED)
+                .toList();
+
+        // Revenue per day, oldest first, with empty days kept so the chart has a steady axis.
+        Map<LocalDate, BigDecimal> perDay = new LinkedHashMap<>();
+        for (int offset = SALES_DAYS - 1; offset >= 0; offset--) {
+            perDay.put(today.minusDays(offset), BigDecimal.ZERO);
+        }
+        for (Order order : window) {
+            LocalDate day = LocalDate.ofInstant(order.getCreatedAt(), zone);
+            if (perDay.containsKey(day)) {
+                perDay.merge(day, order.getTotal(), BigDecimal::add);
+            }
+        }
+        List<SalesPoint> salesOverview = perDay.entrySet().stream()
+                .map(entry -> new SalesPoint(
+                        entry.getKey().getDayOfWeek().getDisplayName(TextStyle.SHORT, Locale.ENGLISH),
+                        entry.getValue()))
+                .toList();
+
+        // Line items joined to the catalogue for their category.
+        Set<Long> productIds = window.stream()
+                .flatMap(order -> order.getItems().stream())
+                .map(OrderItem::getProductId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, String> categoryByProduct = productRepository.findAllById(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, Product::getCategory));
+        Map<String, String> categoryNames = categoryRepository.findAll().stream()
+                .collect(Collectors.toMap(Category::getSlug, Category::getName, (first, second) -> first));
+
+        Map<String, BigDecimal> revenueByCategory = new LinkedHashMap<>();
+        Map<String, Integer> unitsByProduct = new LinkedHashMap<>();
+        Map<String, OrderItem> latestItem = new LinkedHashMap<>();
+        for (Order order : window) {
+            for (OrderItem item : order.getItems()) {
+                int quantity = item.getQuantity() == null ? 0 : item.getQuantity();
+                BigDecimal price = item.getPrice() == null ? BigDecimal.ZERO : item.getPrice();
+                String slug = item.getProductId() == null ? null : categoryByProduct.get(item.getProductId());
+                String category = slug == null ? "Other" : categoryNames.getOrDefault(slug, slug);
+                revenueByCategory.merge(category, price.multiply(BigDecimal.valueOf(quantity)), BigDecimal::add);
+
+                String key = item.getProductId() != null ? "id:" + item.getProductId() : "name:" + item.getName();
+                unitsByProduct.merge(key, quantity, Integer::sum);
+                // Orders arrive newest first, so the first line seen carries the latest name, price and image.
+                latestItem.putIfAbsent(key, item);
+            }
+        }
+
+        List<CategorySales> salesByCategory = revenueByCategory.entrySet().stream()
+                .filter(entry -> entry.getValue().signum() > 0)
+                .sorted(Map.Entry.<String, BigDecimal>comparingByValue().reversed())
+                .map(entry -> new CategorySales(entry.getKey(), entry.getValue()))
+                .toList();
+
+        List<TopProduct> topSelling = unitsByProduct.entrySet().stream()
+                .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                .limit(5)
+                .map(entry -> latestItem.get(entry.getKey()))
+                .map(item -> new TopProduct(item.getName(), item.getPrice(), item.getImage()))
+                .toList();
+
+        List<RecentOrder> recentOrders = orderRepository
+                .findAll(PageRequest.of(0, 6, Sort.by(Sort.Direction.DESC, "createdAt")))
+                .map(order -> new RecentOrder(
+                        order.getOrderNumber(),
+                        order.getCustomerName(),
+                        order.getTotal(),
+                        prettify(order.getStatus().name())))
+                .getContent();
+
+        return new DashboardInsights(salesOverview, salesByCategory, topSelling, recentOrders);
+    }
+
+    /** The store's configured timezone decides where one sales day ends and the next begins. */
+    private ZoneId storeZone() {
+        try {
+            return ZoneId.of(settingsService.getPublicSettings().timezone());
+        } catch (DateTimeException | NullPointerException ex) {
+            return ZoneId.of("UTC");
+        }
     }
 
     private TopProduct toTopProduct(Product p) {

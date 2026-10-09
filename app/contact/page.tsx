@@ -12,7 +12,7 @@ import { WhatsAppContactIcon } from "@/components/whatsapp-button"
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Contact Paje Dhow Furniture about products, custom furniture, orders, and workshop visits in Bwejuu, Zanzibar.",
+    "Contact Kipaji Dhow Furniture about products, custom furniture, orders, and workshop visits in Bwejuu, Zanzibar.",
 }
 
 export default function ContactPage() {
@@ -115,7 +115,7 @@ export default function ContactPage() {
 
             <div className="h-[300px] w-full min-w-0 overflow-hidden border sm:aspect-[16/10] sm:h-auto sm:min-h-[300px] border-white/15 bg-white/5 shadow-elevated">
               <iframe
-                title="Map showing Paje Dhow Furniture at QG48+WHW, Bwejuu"
+                title="Map showing Kipaji Dhow Furniture at QG48+WHW, Bwejuu"
                 src="https://www.google.com/maps?q=QG48%2BWHW%2C%20Bwejuu%2C%20Zanzibar&output=embed"
                 className="h-full w-full border-0"
                 loading="lazy"

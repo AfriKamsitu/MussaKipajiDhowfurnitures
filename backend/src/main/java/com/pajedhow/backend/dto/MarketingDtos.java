@@ -30,12 +30,25 @@ public final class MarketingDtos {
     ) {}
 
     public record CouponRequest(
-            @NotBlank String code,
+            @NotBlank @Size(max = 40) @Pattern(regexp = "^[A-Za-z0-9_-]+$", message = "Use letters, numbers, dashes or underscores only") String code,
             @NotBlank String discountType,  // PERCENTAGE | FIXED | FREE_SHIPPING
-            BigDecimal discountValue,
-            Integer usageLimit,
+            @PositiveOrZero BigDecimal discountValue,
+            @PositiveOrZero Integer usageLimit,
             LocalDate validUntil,
             String status
+    ) {}
+
+    /** A buyer asking what a code would take off the current cart. */
+    public record CouponQuoteRequest(
+            @NotBlank @Size(max = 40) String code,
+            @NotNull @PositiveOrZero BigDecimal subtotal
+    ) {}
+
+    public record CouponQuoteResponse(
+            String code,
+            String discountType,
+            BigDecimal discount,
+            boolean freeShipping
     ) {}
 
     // ---- Banners ----

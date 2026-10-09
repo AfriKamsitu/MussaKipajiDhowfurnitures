@@ -131,11 +131,11 @@ export function AdminSidebar({
         {/* Brand */}
         <div className="flex items-center justify-between px-5 py-5">
           <Link href="/admin" className="group flex items-center gap-2.5">
-            <span className="flex size-9 items-center justify-center overflow-hidden rounded-full ring-1 ring-black/10">
-              <Image src="/paje-dhow-furniture-logo.jpeg" alt="Paje Dhow Furniture logo" width={36} height={36} className="size-9 rounded-full object-cover" />
+            <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full ring-1 ring-black/10">
+              <Image src="/kipaji-dhow-furniture-logo.jpg" alt="Kipaji Dhow Furniture logo" width={44} height={44} className="size-11 rounded-full object-cover" />
             </span>
             <span className="leading-tight">
-              <span className="block text-[13px] font-medium uppercase tracking-[0.16em] text-foreground">Paje Dhow</span>
+              <span className="block text-[13px] font-medium uppercase tracking-[0.16em] text-foreground">Kipaji Dhow</span>
               <span className="block text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Admin panel</span>
             </span>
           </Link>

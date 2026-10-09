@@ -60,7 +60,7 @@ export function ProfileView() {
           <div>
             <h3 className="font-bold text-foreground">Contact details</h3>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">
-              We use these details for order updates and delivery communication.
+              We use these details to contact you about your orders.
             </p>
           </div>
 
@@ -136,7 +136,7 @@ export function ProfileView() {
               href="/account/addresses"
               className="inline-flex items-center gap-1.5 text-sm font-bold text-primary hover:underline"
             >
-              Manage delivery addresses
+              Manage addresses
               <ArrowRight className="size-4" />
             </Link>
             <button

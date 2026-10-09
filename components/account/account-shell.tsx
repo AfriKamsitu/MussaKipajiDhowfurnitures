@@ -282,12 +282,12 @@ export function AccountShell({
           </div>
         </header>
 
-        <main id="main-content" className="flex-1 px-4 pb-24 pt-5 sm:px-6 md:pb-10 lg:px-8 lg:pt-7">
+        <main id="main-content" className="flex-1 px-4 pb-24 pt-5 sm:px-6 lg:pb-10 lg:px-8 lg:pt-7">
           <div className="mx-auto w-full max-w-[1160px]">{children}</div>
         </main>
       </div>
 
-      <MobileBuyerNav />
+      <MobileBuyerNav onMenu={() => setDrawerOpen(true)} />
     </div>
   )
 }

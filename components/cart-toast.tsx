@@ -6,13 +6,16 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Check, X } from "lucide-react"
 import { useStore } from "@/components/store-provider"
+import { useStoreSettings } from "@/components/store-settings-provider"
+import { formatPrice } from "@/lib/data"
 
-const VISIBLE_MS = 4500
+const VISIBLE_MS = 6000
 
 /** Confirms an add-to-cart without leaving the page, with a direct route to the cart. */
 export function CartToast() {
   const pathname = usePathname()
-  const { cartNotice, dismissCartNotice, cartCount } = useStore()
+  const { cartNotice, dismissCartNotice, cartCount, cartTotal } = useStore()
+  const { currency } = useStoreSettings()
 
   useEffect(() => {
     if (!cartNotice) return
@@ -31,11 +34,12 @@ export function CartToast() {
       role="status"
       className="pointer-events-none fixed inset-x-3 top-[calc(var(--site-header-height)+0.5rem)] z-[95] flex justify-center sm:inset-x-auto sm:right-5 sm:justify-end"
     >
-      {cartNotice && (
+      {cartNotice && pathname !== "/cart" && (
         <div
           key={cartNotice.at}
-          className="sf-toast-enter sf-card pointer-events-auto flex w-full max-w-sm items-center gap-3 p-3 shadow-elevated"
+          className="sf-toast-enter sf-card pointer-events-auto w-full max-w-sm p-3 shadow-elevated"
         >
+          <div className="flex items-center gap-3">
           <span className="relative size-14 shrink-0 overflow-hidden rounded-md bg-secondary">
             <Image
               src={cartNotice.product.image || "/placeholder.svg"}
@@ -55,12 +59,10 @@ export function CartToast() {
               {cartNotice.product.name}
               {cartNotice.limited && cartNotice.quantity > 0 ? " (limited by stock)" : ""}
             </p>
-            <Link
-              href="/cart"
-              className="mt-1 inline-flex min-h-6 items-center text-xs font-bold text-primary underline-offset-2 hover:underline"
-            >
-              View cart ({cartCount})
-            </Link>
+            <p className="mt-0.5 text-xs text-foreground">
+              Cart subtotal ({cartCount} {cartCount === 1 ? "item" : "items"}):{" "}
+              <span className="font-bold">{formatPrice(cartTotal, currency)}</span>
+            </p>
           </div>
           <button
             type="button"
@@ -70,6 +72,15 @@ export function CartToast() {
           >
             <X className="size-4" />
           </button>
+          </div>
+          <div className="mt-2.5 grid grid-cols-2 gap-2">
+            <Link href="/cart" className="sf-btn sf-btn-outline sf-btn-sm">
+              Go to cart
+            </Link>
+            <Link href="/checkout" className="sf-btn sf-btn-primary sf-btn-sm">
+              Checkout
+            </Link>
+          </div>
         </div>
       )}
     </div>

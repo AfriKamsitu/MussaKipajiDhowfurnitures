@@ -19,6 +19,8 @@ type OrderDetail = {
   total: number
   subtotal: number
   delivery: number
+  discount: number
+  couponCode: string | null
   customer: string
   address: string
   phone: string
@@ -47,6 +49,8 @@ export default function OrderDetailsPage() {
           total: Number(raw.total ?? 0),
           subtotal: Number(raw.subtotal ?? 0),
           delivery: Number(raw.delivery ?? 0),
+          discount: Number(raw.discount ?? 0),
+          couponCode: raw.couponCode ? String(raw.couponCode) : null,
           customer: String(raw.customerName ?? "—"),
           address: String(raw.shippingAddress ?? "—"),
           phone: String(raw.phone ?? "—"),
@@ -185,6 +189,16 @@ export default function OrderDetailsPage() {
                 <span className="text-muted-foreground">Subtotal</span>
                 <span className="font-medium text-foreground">{formatTZS(order.subtotal, currency)}</span>
               </div>
+              {(order.discount > 0 || order.couponCode) && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">
+                    Discount{order.couponCode ? ` (coupon ${order.couponCode})` : ""}
+                  </span>
+                  <span className="font-medium text-foreground">
+                    {order.discount > 0 ? `-${formatTZS(order.discount, currency)}` : "Free delivery"}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Delivery Fee</span>
                 <span className="font-medium text-foreground">

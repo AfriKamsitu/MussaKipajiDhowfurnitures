@@ -38,3 +38,10 @@ __pycache__/
 *.pyc
 *.log
 /.agents/
+
+# the About page plays this workshop film, so these three files are part of the site
+!/public/videos/
+/public/videos/*
+!/public/videos/paje-dhow-hero-v2-1080.mp4
+!/public/videos/paje-dhow-hero-v2-720.mp4
+!/public/videos/paje-dhow-poster-v2.jpg

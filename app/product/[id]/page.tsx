@@ -35,7 +35,7 @@ export default async function ProductPage({ params }: Props) {
     ?? product.category.replace(/-/g, " ")
 
   return (
-    <PageShell>
+    <PageShell footer={false}>
       <Breadcrumb
         className="mb-4 capitalize"
         items={[

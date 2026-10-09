@@ -38,6 +38,7 @@ class OrderServiceTest {
     @Mock private ActivityLogService activityLog;
     @Mock private SystemSettingsService settingsService;
     @Mock private OrderEmailService emailService;
+    @Mock private CouponService couponService;
 
     private OrderService orderService;
 
@@ -49,7 +50,8 @@ class OrderServiceTest {
                 userRepository,
                 activityLog,
                 settingsService,
-                emailService);
+                emailService,
+                couponService);
     }
 
     @Test

@@ -73,7 +73,9 @@ public final class Mappers {
                 o.getSubtotal(), o.getDelivery(), o.getTotal(),
                 o.getItems().stream().map(Mappers::toOrderItem).toList(),
                 o.getTimeline().stream().map(Mappers::toOrderEvent).toList(),
-                o.getCreatedAt(), o.getUpdatedAt()
+                o.getCreatedAt(), o.getUpdatedAt(),
+                o.getDiscount() != null ? o.getDiscount() : java.math.BigDecimal.ZERO,
+                o.getCouponCode()
         );
     }
 

@@ -92,7 +92,7 @@ export function AccountOverviewView() {
   const profileChecks = [
     { label: "Add your name", done: Boolean(user.name.trim()), href: "/account/profile" },
     { label: "Add a phone number", done: Boolean(user.phone), href: "/account/profile" },
-    { label: "Save a delivery address", done: user.addresses.length > 0, href: "/account/addresses" },
+    { label: "Save an address", done: user.addresses.length > 0, href: "/account/addresses" },
     { label: "Choose a default address", done: user.addresses.some((address) => address.isDefault), href: "/account/addresses" },
   ]
   const completed = profileChecks.filter((check) => check.done).length
@@ -324,7 +324,7 @@ export function AccountOverviewView() {
           <section className={cn(panel, "p-5")} aria-labelledby="address-title">
             <div className="flex items-center justify-between gap-3">
               <h2 id="address-title" className={panelTitle}>
-                Delivery address
+                Saved address
               </h2>
               <Link href="/account/addresses" className={textLink}>
                 {defaultAddress ? "Manage" : "Add"}

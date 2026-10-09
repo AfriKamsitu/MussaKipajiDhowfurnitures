@@ -110,7 +110,7 @@ export function RegisterForm() {
       </div>
       <label className="flex items-start gap-2.5 text-sm leading-5 text-muted-foreground">
         <input required disabled={loading} type="checkbox" className="mt-0.5 size-4 rounded border-border accent-[var(--primary)]" />
-        <span>I agree to the <Link href="/" className="font-semibold text-primary hover:underline">Terms of Service</Link> and <Link href="/" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.</span>
+        <span>I agree to the <Link href="/terms" target="_blank" className="font-semibold text-primary hover:underline">Terms of Service</Link> and <Link href="/terms#privacy" target="_blank" className="font-semibold text-primary hover:underline">Privacy Policy</Link>.</span>
       </label>
       <label className="flex items-start gap-2.5 rounded-lg border border-border bg-secondary/35 p-3 text-sm leading-5 text-muted-foreground">
         <input type="checkbox" disabled={loading} checked={marketingOptIn} onChange={(event) => setMarketingOptIn(event.target.checked)} className="mt-0.5 size-4 rounded border-border accent-[var(--primary)]" />

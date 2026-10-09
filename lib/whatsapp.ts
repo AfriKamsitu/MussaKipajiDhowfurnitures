@@ -1,4 +1,4 @@
-// Central WhatsApp contact helper for Paje Dhow Furniture.
+// Central WhatsApp contact helper for Kipaji Dhow Furniture.
 // All "contact seller" actions across the store route through here.
 
 export const WHATSAPP_NUMBER = "255762082422"
@@ -53,7 +53,7 @@ export function openWhatsApp(message?: string) {
 /** Standard enquiry message for a specific product. */
 export function productEnquiryMessage(product: WhatsAppProduct): string {
   const lines = [
-    "Hello Paje Dhow Furniture,",
+    "Hello Kipaji Dhow Furniture,",
     `I'm interested in *${product.name}*.`,
   ]
   if (product.id) lines.push(`Product ref: ${product.id}`)
@@ -61,7 +61,7 @@ export function productEnquiryMessage(product: WhatsAppProduct): string {
   if (imageUrl) lines.push(`Product image: ${imageUrl}`)
   const productUrl = storefrontUrl(product.productUrl)
   if (productUrl) lines.push(`Product page: ${productUrl}`)
-  lines.push("Could you share availability, final price and delivery details?")
+  lines.push("Could you share availability, final price and collection details?")
   return lines.join("\n")
 }
 
@@ -89,7 +89,7 @@ export function orderWhatsAppMessage({
   formatAmount: (amount: number) => string
 }): string {
   const lines = [
-    "Hello Paje Dhow Furniture,",
+    "Hello Kipaji Dhow Furniture,",
     `I would like to confirm order *${orderNumber || "New order"}*.`,
     "",
   ]
@@ -107,15 +107,12 @@ export function orderWhatsAppMessage({
   })
 
   lines.push(`Products total: *${formatAmount(productTotal)}*`)
-  lines.push(
-    deliveryFee == null
-      ? "Delivery fee: To be confirmed on WhatsApp"
-      : `Delivery fee: *${deliveryFee === 0 ? "Free / pickup" : formatAmount(deliveryFee)}*`,
-  )
+  // A delivery line appears only when the order actually carries a delivery charge.
+  if (deliveryFee != null && deliveryFee > 0) lines.push(`Delivery fee: *${formatAmount(deliveryFee)}*`)
   if (orderTotal != null) lines.push(`Order total: *${formatAmount(orderTotal)}*`)
   lines.push(`Name: ${customerName}`)
   lines.push(`Email: ${customerEmail}`)
   lines.push(`Phone: ${phone}`)
-  lines.push(`Delivery address: ${shippingAddress}`)
+  lines.push(`Collection / address: ${shippingAddress}`)
   return lines.join("\n")
 }

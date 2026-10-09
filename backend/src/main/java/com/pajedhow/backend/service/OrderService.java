@@ -12,6 +12,7 @@ import com.pajedhow.backend.mapper.Mappers;
 import com.pajedhow.backend.repository.OrderRepository;
 import com.pajedhow.backend.repository.ProductRepository;
 import com.pajedhow.backend.repository.UserRepository;
+import com.pajedhow.backend.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +44,7 @@ public class OrderService {
     private final ActivityLogService activityLog;
     private final SystemSettingsService systemSettingsService;
     private final OrderEmailService orderEmailService;
+    private final CouponService couponService;
 
     @Transactional(readOnly = true)
     public Page<OrderResponse> findAll(String status, Pageable pageable) {
@@ -140,9 +142,21 @@ public class OrderService {
                 delivery = settings.flatShippingRate();
             }
         }
+        // Coupons are for buyer checkouts; the discount is always worked out here, never taken from the client.
+        BigDecimal discount = BigDecimal.ZERO;
+        String couponCode = req.couponCode() == null ? "" : req.couponCode().trim();
+        if (customerId != null && !couponCode.isEmpty()) {
+            Coupon coupon = couponService.redeem(couponCode);
+            discount = couponService.discountFor(coupon, subtotal);
+            if (coupon.getDiscountType() == com.pajedhow.backend.entity.enums.Enums.DiscountType.FREE_SHIPPING) {
+                delivery = BigDecimal.ZERO;
+            }
+            order.setCouponCode(coupon.getCode());
+        }
         order.setSubtotal(subtotal);
+        order.setDiscount(discount);
         order.setDelivery(delivery);
-        order.setTotal(subtotal.add(delivery));
+        order.setTotal(subtotal.subtract(discount).add(delivery));
         order.addEvent(OrderEvent.builder().label("Order placed").done(true).build());
 
         Order saved = orderRepository.save(order);
@@ -165,6 +179,7 @@ public class OrderService {
         }
         if (next == OrderStatus.CANCELLED) {
             restoreStock(order);
+            couponService.release(order.getCouponCode());
         }
         order.setStatus(next);
 
@@ -185,7 +200,7 @@ public class OrderService {
         }
 
         Order saved = orderRepository.save(order);
-        activityLog.record("Admin", "updated order status to " + next, saved.getOrderNumber());
+        activityLog.record(SecurityUtils.actorName(), "updated order status to " + next, saved.getOrderNumber());
         return Mappers.toOrder(saved);
     }
 
@@ -196,7 +211,7 @@ public class OrderService {
             throw new BadRequestException("Cancel the order before deleting it.");
         }
         orderRepository.delete(order);
-        activityLog.record("Admin", "deleted order", order.getOrderNumber());
+        activityLog.record(SecurityUtils.actorName(), "deleted order", order.getOrderNumber());
     }
 
     private void restoreStock(Order order) {

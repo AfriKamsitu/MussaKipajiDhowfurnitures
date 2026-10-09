@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function ShopPage() {
   return (
-    <PageShell>
+    <PageShell footer={false}>
       <Suspense fallback={<ProductGridSkeleton count={8} className="mt-16" />}>
         <ShopBrowser />
       </Suspense>

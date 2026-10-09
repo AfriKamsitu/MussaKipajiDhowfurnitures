@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { Fragment, type ReactNode } from "react"
+import { MobileBuyerNav } from "@/components/mobile-buyer-nav"
 import { SiteFooter } from "@/components/site-footer"
-import { SiteHeader } from "@/components/site-header"
+import { CheckoutHeader, SiteHeader } from "@/components/site-header"
 import { cn } from "@/lib/utils"
 
 export type Crumb = { label: string; href?: string }
@@ -62,19 +63,38 @@ export function PageIntro({
 export function PageShell({
   children,
   className,
+  variant = "default",
+  footer = true,
 }: {
   children: ReactNode
   className?: string
   /** Kept for callers of the previous layout; every page now uses one width. */
   wide?: boolean
+  /** Checkout drops the browse header, footer links and tab bar so nothing pulls the buyer away. */
+  variant?: "default" | "checkout"
+  /** False leaves out the footer links; phones and tablets keep the bottom tab bar. */
+  footer?: boolean
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <SiteHeader />
-      <main id="main-content" className={cn("sf-container flex-1 pb-12 pt-4 sm:pb-16 sm:pt-5", className)}>
+      {variant === "checkout" ? <CheckoutHeader /> : <SiteHeader />}
+      <main
+        id="main-content"
+        className={cn("sf-container flex-1 pb-12 pt-4 sm:pb-16 sm:pt-5", !footer && "max-lg:pb-28", className)}
+      >
         {children}
       </main>
-      <SiteFooter />
+      {variant === "checkout" ? (
+        <footer className="border-t border-border py-5 text-center text-xs text-muted-foreground">
+          <Link href="/contact" className="hover:text-primary hover:underline">
+            Need help? Contact us
+          </Link>
+        </footer>
+      ) : footer ? (
+        <SiteFooter />
+      ) : (
+        <MobileBuyerNav />
+      )}
     </div>
   )
 }

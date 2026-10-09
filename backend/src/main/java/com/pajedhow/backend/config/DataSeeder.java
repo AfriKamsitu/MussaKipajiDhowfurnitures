@@ -59,7 +59,7 @@ public class DataSeeder implements CommandLineRunner {
             }
         }, () -> {
             userRepository.save(User.builder()
-                    .name("Paje Dhow Admin")
+                    .name("Kipaji Dhow Admin")
                     .email(adminEmail)
                     .password(passwordEncoder.encode(adminPassword))
                     .role(Role.ADMIN)

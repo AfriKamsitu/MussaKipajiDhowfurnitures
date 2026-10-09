@@ -160,7 +160,7 @@ export function DashboardSummary() {
       <section className="admin-dashboard-hero admin-enter relative isolate mb-7 overflow-hidden rounded-2xl border border-white/20 text-[#f6f5f3] shadow-[0_28px_70px_-42px_rgba(17,19,15,0.65)]">
         <Image
           src="/reference-site/craft-workshop.webp"
-          alt="The Paje Dhow Furniture workshop"
+          alt="The Kipaji Dhow Furniture workshop"
           fill
           sizes="(max-width: 1024px) 100vw, 900px"
           className="object-cover"
@@ -169,7 +169,7 @@ export function DashboardSummary() {
         <div className="relative flex min-h-[270px] flex-col justify-between gap-10 px-5 py-6 sm:min-h-[300px] sm:px-8 sm:py-8 lg:px-10">
           <div className="flex items-center justify-between gap-4">
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#d9b98a]">
-              Paje Dhow / Store dashboard
+              Kipaji Dhow / Store dashboard
             </p>
             <span className="hidden text-[9px] uppercase tracking-[0.18em] text-white/55 sm:block">
               Live workshop overview

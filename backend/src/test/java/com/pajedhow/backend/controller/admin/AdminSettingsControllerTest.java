@@ -46,7 +46,7 @@ class AdminSettingsControllerTest {
     void settingsEndpointReturnsPersistedConfiguration() throws Exception {
         SettingsResponse response = new SettingsResponse(
                 3L,
-                "Paje Dhow Furniture",
+                "Kipaji Dhow Furniture",
                 "Handcrafted furniture",
                 "store@example.com",
                 "+255 762 082 422",
@@ -67,10 +67,10 @@ class AdminSettingsControllerTest {
                 BigDecimal.ZERO,
                 5,
                 true,
-                "Paje Dhow Furniture",
+                "Kipaji Dhow Furniture",
                 "Handcrafted furniture from Zanzibar.",
                 true,
-                "Paje Dhow Furniture",
+                "Kipaji Dhow Furniture",
                 "store@example.com",
                 "orders@example.com",
                 true,
@@ -88,7 +88,7 @@ class AdminSettingsControllerTest {
         mockMvc.perform(get("/api/admin/settings"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.version").value(3))
-                .andExpect(jsonPath("$.storeName").value("Paje Dhow Furniture"))
+                .andExpect(jsonPath("$.storeName").value("Kipaji Dhow Furniture"))
                 .andExpect(jsonPath("$.maintenanceMode").value(false));
     }
 }

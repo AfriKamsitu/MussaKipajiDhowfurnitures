@@ -73,6 +73,15 @@ public class Order {
     @Builder.Default
     private BigDecimal delivery = BigDecimal.ZERO;
 
+    /** Amount taken off the subtotal by a coupon; null on orders placed before coupons existed. */
+    @Column(precision = 14, scale = 2)
+    @Builder.Default
+    private BigDecimal discount = BigDecimal.ZERO;
+
+    /** Coupon redeemed on this order, kept so a cancellation can hand the use back. */
+    @Column(length = 40)
+    private String couponCode;
+
     @Column(nullable = false, precision = 14, scale = 2)
     @Builder.Default
     private BigDecimal total = BigDecimal.ZERO;

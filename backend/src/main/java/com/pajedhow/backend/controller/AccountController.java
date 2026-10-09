@@ -2,12 +2,15 @@ package com.pajedhow.backend.controller;
 
 import com.pajedhow.backend.dto.AddressDtos.AddressRequest;
 import com.pajedhow.backend.dto.AddressDtos.AddressResponse;
+import com.pajedhow.backend.dto.MarketingDtos.CouponQuoteRequest;
+import com.pajedhow.backend.dto.MarketingDtos.CouponQuoteResponse;
 import com.pajedhow.backend.dto.MarketingDtos.ReviewRequest;
 import com.pajedhow.backend.dto.MarketingDtos.ReviewResponse;
 import com.pajedhow.backend.dto.OrderDtos.CreateOrderRequest;
 import com.pajedhow.backend.dto.OrderDtos.OrderResponse;
 import com.pajedhow.backend.dto.UserDtos.UpdateProfileRequest;
 import com.pajedhow.backend.dto.UserDtos.UserResponse;
+import com.pajedhow.backend.service.CouponService;
 import com.pajedhow.backend.service.OrderService;
 import com.pajedhow.backend.service.ReviewService;
 import com.pajedhow.backend.service.UserService;
@@ -29,6 +32,7 @@ public class AccountController {
     private final UserService userService;
     private final OrderService orderService;
     private final ReviewService reviewService;
+    private final CouponService couponService;
 
     // ---- Profile ----
     @GetMapping("/profile")
@@ -74,6 +78,13 @@ public class AccountController {
     @ResponseStatus(HttpStatus.CREATED)
     public OrderResponse placeOrder(@Valid @RequestBody CreateOrderRequest req) {
         return orderService.create(req, SecurityUtils.currentUserId());
+    }
+
+    // ---- Coupons ----
+    /** Checks a code against the cart subtotal; the discount is applied for real when the order is placed. */
+    @PostMapping("/coupons/quote")
+    public CouponQuoteResponse quoteCoupon(@Valid @RequestBody CouponQuoteRequest req) {
+        return couponService.quote(req.code(), req.subtotal());
     }
 
     // ---- Reviews (own submissions) ----

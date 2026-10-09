@@ -8,6 +8,7 @@ import { useAuth, type Order } from "@/components/auth-provider"
 import { formatPrice } from "@/lib/data"
 import { useStoreSettings } from "@/components/store-settings-provider"
 import { cn } from "@/lib/utils"
+import { OFFERS_DELIVERY, orderStatusLabel } from "@/lib/pricing"
 import { openWhatsApp } from "@/lib/whatsapp"
 
 const statuses = ["All", "Pending", "Processing", "Shipped", "Delivered", "Cancelled"] as const
@@ -70,7 +71,7 @@ export function OrdersView() {
             Your orders
           </p>
           <h2 className="mt-2 text-3xl font-medium tracking-[-0.06em] text-[#2a211b]">
-            Orders &amp; delivery
+            {OFFERS_DELIVERY ? "Orders & delivery" : "Your orders"}
           </h2>
           <p className="mt-1 text-sm font-light text-[#6f6358]">
             See what is happening with every piece you have ordered.
@@ -121,16 +122,24 @@ export function OrdersView() {
           return (
           <div key={order.id} className="overflow-hidden border border-black/10 bg-white shadow-[0_20px_48px_-38px_rgba(17,19,15,0.45)] transition-shadow hover:shadow-[0_25px_55px_-38px_rgba(17,19,15,0.55)]">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 bg-[#f6f0e6]/70 px-5 py-4">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Order #{order.id}</p>
-                  <p className="text-xs text-muted-foreground">Placed {new Date(order.date).toLocaleDateString()}</p>
-                </div>
+                <dl className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+                  {[
+                    ["Order placed", new Date(order.date).toLocaleDateString(undefined, { dateStyle: "medium" })],
+                    ["Total", formatPrice(order.total, currency)],
+                    ["Order #", order.id],
+                  ].map(([label, value]) => (
+                    <div key={label}>
+                      <dt className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">{label}</dt>
+                      <dd className="mt-0.5 font-semibold text-foreground">{value}</dd>
+                    </div>
+                  ))}
+                </dl>
                 <div className="flex items-center gap-2">
                   <span className={cn("px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em]", statusStyles[order.status])}>
-                    {order.status}
+                    {orderStatusLabel(order.status)}
                   </span>
                   <button
-                    onClick={() => openWhatsApp(`Hello Paje Dhow Furniture, I need help with order #${order.id}.`)}
+                    onClick={() => openWhatsApp(`Hello Kipaji Dhow Furniture, I need help with order #${order.id}.`)}
                     className="inline-flex min-h-10 items-center gap-1.5 border border-black/15 bg-white px-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[#6b2b2b] transition hover:border-[#6b2b2b] hover:text-[#6b2b2b]"
                   >
                     <MessageCircle className="size-3.5" />
@@ -150,7 +159,7 @@ export function OrdersView() {
                       <div key={step} className="min-w-0">
                         <div className={cn("h-1 transition-colors", index <= currentStep ? "bg-[#6b2b2b]" : "bg-black/10")} />
                         <p className={cn("mt-2 truncate text-[10px] font-bold uppercase tracking-[0.1em]", index <= currentStep ? "text-[#6b2b2b]" : "text-[#aaa49a]")}>
-                          {step}
+                          {orderStatusLabel(step)}
                         </p>
                       </div>
                     ))}
@@ -167,6 +176,14 @@ export function OrdersView() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
                       <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                      {item.productId && (
+                        <Link
+                          href={`/product/${encodeURIComponent(item.productId)}`}
+                          className="mt-1 inline-flex min-h-6 items-center text-xs font-semibold text-[#6b2b2b] underline-offset-4 hover:underline"
+                        >
+                          Buy it again
+                        </Link>
+                      )}
                     </div>
                     <p className="text-sm font-semibold text-foreground">{formatPrice(item.price * item.quantity, currency)}</p>
                   </li>
@@ -176,11 +193,7 @@ export function OrdersView() {
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/10 bg-[#f8f7f3] px-5 py-4">
                 <div className="flex items-center gap-2 text-xs text-[#6f6358]">
                   <Truck className="size-4 text-[#6b2b2b]" />
-                  Delivery details update as the order progresses.
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Total</p>
-                  <p className="text-base font-bold text-foreground">{formatPrice(order.total, currency)}</p>
+                  {OFFERS_DELIVERY ? "Delivery details update as the order progresses." : "We will contact you when this order is ready to collect."}
                 </div>
               </div>
             </div>

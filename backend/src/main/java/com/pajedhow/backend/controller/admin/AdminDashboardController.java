@@ -1,6 +1,7 @@
 package com.pajedhow.backend.controller.admin;
 
 import com.pajedhow.backend.dto.DashboardDtos.ActivityEntry;
+import com.pajedhow.backend.dto.DashboardDtos.DashboardInsights;
 import com.pajedhow.backend.dto.DashboardDtos.DashboardResponse;
 import com.pajedhow.backend.service.ActivityLogService;
 import com.pajedhow.backend.service.DashboardService;
@@ -26,18 +27,23 @@ public class AdminDashboardController {
     @GetMapping("/dashboard")
     public Map<String, Object> dashboard() {
         DashboardResponse data = dashboardService.overview();
+        DashboardInsights computed = dashboardService.insights();
+        DashboardInsights insights = computed != null
+                ? computed
+                : new DashboardInsights(List.of(), List.of(), List.of(), List.of());
         return Map.of(
                 "success", true,
                 "message", "Admin dashboard ready",
                 "data", Map.of(
                         "stats", data.stats(),
-                        "salesOverview", List.of(),
-                        "topSelling", data.topSelling(),
+                        "salesOverview", insights.salesOverview(),
+                        // Best sellers by units sold; a store with no sales yet shows its catalogue instead.
+                        "topSelling", insights.topSelling().isEmpty() ? data.topSelling() : insights.topSelling(),
                         "orderStatusBreakdown", data.orderStatusBreakdown(),
-                        "salesByCategory", List.of(),
+                        "salesByCategory", insights.salesByCategory(),
                         "productTabs", List.of(),
                         "orderTabs", List.of(),
-                        "recentOrders", List.of(),
+                        "recentOrders", insights.recentOrders(),
                         "recentProducts", List.of(),
                         "recentActivity", data.recentActivity()
                 )

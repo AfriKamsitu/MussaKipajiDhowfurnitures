@@ -28,7 +28,7 @@ public class SystemSettings {
 
     @Column(nullable = false, length = 120)
     @Builder.Default
-    private String storeName = "Paje Dhow Furniture";
+    private String storeName = "Kipaji Dhow Furniture";
 
     @Column(nullable = false, length = 160)
     @Builder.Default
@@ -52,7 +52,7 @@ public class SystemSettings {
 
     @Column(nullable = false, length = 1024)
     @Builder.Default
-    private String logoUrl = "/paje-dhow-furniture-logo.jpeg";
+    private String logoUrl = "/kipaji-dhow-furniture-logo.jpg";
 
     @Column(nullable = false, length = 160)
     @Builder.Default
@@ -111,11 +111,11 @@ public class SystemSettings {
 
     @Column(nullable = false, length = 70)
     @Builder.Default
-    private String metaTitle = "Paje Dhow Furniture";
+    private String metaTitle = "Kipaji Dhow Furniture";
 
     @Column(nullable = false, length = 170)
     @Builder.Default
-    private String metaDescription = "Discover handcrafted furniture from Paje Dhow Furniture.";
+    private String metaDescription = "Discover handcrafted furniture from Kipaji Dhow Furniture.";
 
     @Column(nullable = false)
     @Builder.Default
@@ -123,7 +123,7 @@ public class SystemSettings {
 
     @Column(nullable = false, length = 120)
     @Builder.Default
-    private String senderName = "Paje Dhow Furniture";
+    private String senderName = "Kipaji Dhow Furniture";
 
     @Column(nullable = false, length = 160)
     @Builder.Default

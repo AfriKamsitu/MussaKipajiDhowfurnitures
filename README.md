@@ -1,4 +1,4 @@
-# Paje Dhow Furniture
+# Kipaji Dhow Furniture
 
 Next.js storefront with a thin `/api` gateway that proxies to the Spring Boot backend.
 

@@ -629,3 +629,170 @@
     animation: none;
   }
 }
+
+/* ---- About: cinematic page (pinned film backdrop, content scrolls over it) ---- */
+.cine-page {
+  /* The film scales past its frame while scrolling; clip it so the page never scrolls sideways. */
+  overflow-x: clip;
+  --cine-hero: 0;
+  --cine-page: 0;
+  --cine-bar: clamp(14px, 4.5vh, 44px);
+  --cine-stage-height: calc(100svh - var(--site-header-height));
+  position: relative;
+  width: 100%;
+  background: #14100d;
+  color: #f6f0e6;
+}
+
+.cine-stage {
+  position: sticky;
+  top: var(--site-header-height);
+  height: var(--cine-stage-height);
+  min-height: 560px;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Scroll-driven dolly: the camera keeps pushing in as the page moves. */
+.cine-stage__dolly {
+  position: absolute;
+  inset: 0;
+  transform: scale(calc(1 + var(--cine-hero) * 0.28 + var(--cine-page) * 0.22));
+  filter: blur(calc(var(--cine-hero) * 3px));
+  will-change: transform;
+}
+
+/* Opening crash zoom: lands fast, then settles. */
+.cine-stage__crash {
+  position: absolute;
+  inset: 0;
+  animation: cine-crash-zoom 2200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Slow, continuous push-in once the shot has landed. */
+.cine-stage__media {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  animation: cine-push-in 26s ease-in-out 2200ms infinite alternate both;
+}
+
+.cine-stage__grade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 45%, transparent 35%, rgba(10, 7, 5, 0.78) 100%),
+    linear-gradient(90deg, rgba(20, 16, 13, 0.82) 0%, rgba(20, 16, 13, 0.35) 55%, transparent 100%),
+    linear-gradient(0deg, rgba(20, 16, 13, 0.92) 0%, rgba(20, 16, 13, 0.1) 55%);
+}
+
+/* Darkens the film once the hero has passed so body copy stays readable. */
+.cine-stage__dim {
+  position: absolute;
+  inset: 0;
+  background: #14100d;
+  opacity: calc(var(--cine-hero) * 0.42);
+}
+
+.cine-stage__grain {
+  position: absolute;
+  inset: -50%;
+  opacity: 0.16;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: cine-grain 900ms steps(6) infinite;
+}
+
+.cine-stage__bar {
+  position: absolute;
+  inset-inline: 0;
+  height: var(--cine-bar);
+  background: #000;
+  animation: cine-aperture 1800ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+
+.cine-stage__bar--top { top: 0; }
+.cine-stage__bar--bottom { bottom: 0; }
+
+/* Everything below is pulled up over the pinned stage. */
+.cine-flow {
+  position: relative;
+  z-index: 1;
+  margin-top: calc(-1 * max(var(--cine-stage-height), 560px));
+}
+
+.cine-hero {
+  position: relative;
+  display: flex;
+  height: var(--cine-stage-height);
+  min-height: 560px;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-top: calc(var(--cine-bar) + 1rem);
+  padding-bottom: calc(var(--cine-bar) + 1.25rem);
+}
+
+.cine-hero__line {
+  animation: cine-line-in 1100ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.cine-hero__copy > .cine-hero__line:nth-child(1) { animation-delay: 1100ms; }
+.cine-hero__copy > .cine-hero__line:nth-child(2) { animation-delay: 1250ms; }
+.cine-hero__copy > .cine-hero__line:nth-child(3) { animation-delay: 1450ms; }
+.cine-hero > .cine-hero__line { animation-delay: 1700ms; }
+
+@keyframes cine-crash-zoom {
+  from {
+    transform: scale(1.9);
+    filter: blur(18px) brightness(1.5);
+  }
+  to {
+    transform: scale(1);
+    filter: blur(0) brightness(1);
+  }
+}
+
+@keyframes cine-push-in {
+  from { transform: scale(1); }
+  to { transform: scale(1.14); }
+}
+
+@keyframes cine-aperture {
+  from { height: 50%; }
+  to { height: var(--cine-bar); }
+}
+
+@keyframes cine-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes cine-grain {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-4%, 3%); }
+  40% { transform: translate(3%, -5%); }
+  60% { transform: translate(-2%, 4%); }
+  80% { transform: translate(5%, -2%); }
+  100% { transform: translate(0, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cine-stage__crash,
+  .cine-stage__media,
+  .cine-stage__grain,
+  .cine-stage__bar,
+  .cine-hero__line {
+    animation: none;
+  }
+}
+
+

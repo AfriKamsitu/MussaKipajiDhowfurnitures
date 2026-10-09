@@ -18,6 +18,16 @@ public final class SecurityUtils {
         return principal.getUser();
     }
 
+    /** Name to record in the activity log: the signed-in person, or "System" for background work. */
+    public static String actorName() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof UserPrincipal principal) {
+            String name = principal.getUser().getName();
+            return name == null || name.isBlank() ? principal.getUser().getEmail() : name;
+        }
+        return "System";
+    }
+
     public static String currentUserId() {
         return currentUser().getId();
     }

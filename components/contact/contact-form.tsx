@@ -34,7 +34,7 @@ export function ContactForm() {
 
   function buildMessage() {
     return [
-      "Hello Paje Dhow Furniture,",
+      "Hello Kipaji Dhow Furniture,",
       name && `Name: ${name}`,
       email && `Email: ${email}`,
       phone && `Phone: ${phone}`,

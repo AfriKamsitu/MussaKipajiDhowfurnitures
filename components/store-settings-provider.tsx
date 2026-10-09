@@ -46,13 +46,13 @@ export type PublicStoreSettings = {
 }
 
 export const defaultStoreSettings: PublicStoreSettings = {
-  storeName: "Paje Dhow Furniture",
+  storeName: "Kipaji Dhow Furniture",
   tagline: "Handcrafted furniture for beautiful spaces",
   storeEmail: "pajedhowfurniture@gmail.com",
   storePhone: "+255 762 082 422",
   currency: "TZS",
   timezone: "Africa/Dar_es_Salaam",
-  logoUrl: "/paje-dhow-furniture-logo.jpeg",
+  logoUrl: "/kipaji-dhow-furniture-logo.jpg",
   addressLine1: "",
   addressLine2: "",
   city: "Zanzibar",
@@ -63,8 +63,8 @@ export const defaultStoreSettings: PublicStoreSettings = {
   freeShippingThreshold: 0,
   estimatedDeliveryDays: 5,
   storePickupEnabled: true,
-  metaTitle: "Paje Dhow Furniture",
-  metaDescription: "Discover handcrafted furniture from Paje Dhow Furniture.",
+  metaTitle: "Kipaji Dhow Furniture",
+  metaDescription: "Discover handcrafted furniture from Kipaji Dhow Furniture.",
   searchIndexingEnabled: true,
   facebookUrl: "",
   instagramUrl: "",

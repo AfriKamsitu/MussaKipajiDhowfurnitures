@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { SafeImage as Image } from "@/components/safe-image"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
@@ -13,7 +13,7 @@ import { WhatsAppGlyph } from "@/components/whatsapp-glyph"
 import { fetchApi } from "@/lib/api"
 import { productHref } from "@/lib/catalog"
 import { formatPrice } from "@/lib/data"
-import { deliveryFee, type FulfillmentMethod } from "@/lib/pricing"
+import { deliveryFee, OFFERS_DELIVERY, paymentLabel, type FulfillmentMethod } from "@/lib/pricing"
 import { cn } from "@/lib/utils"
 import { orderWhatsAppMessage, whatsappUrl } from "@/lib/whatsapp"
 
@@ -27,6 +27,8 @@ type CheckoutDetails = {
   region: string
 }
 
+type AppliedCoupon = { code: string; discount: number; freeShipping: boolean }
+
 type ConfirmedOrder = {
   orderNumber: string
   status: string
@@ -34,6 +36,8 @@ type ConfirmedOrder = {
   shippingAddress: string
   subtotal: number
   delivery: number
+  discount: number
+  couponCode: string | null
   total: number
   items: { id: string; name: string; image: string; quantity: number; price: number }[]
   whatsappLink: string
@@ -67,14 +71,75 @@ export function CheckoutView() {
   const [details, setDetails] = useState<CheckoutDetails>(emptyDetails)
   const [detailsReady, setDetailsReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [fulfillmentMethod, setFulfillmentMethod] = useState<FulfillmentMethod>("DELIVERY")
+  const [chosenMethod, setFulfillmentMethod] = useState<FulfillmentMethod>("DELIVERY")
+  // Collection only: the choice is not offered and every order is placed for collection.
+  const fulfillmentMethod: FulfillmentMethod = OFFERS_DELIVERY
+    ? chosenMethod
+    : settings.storePickupEnabled
+      ? "PICKUP"
+      : "DELIVERY"
+  const collecting = !OFFERS_DELIVERY || fulfillmentMethod === "PICKUP"
   const [paymentMethod, setPaymentMethod] = useState("Cash on Delivery")
   // One key per checkout attempt: a retry after a network failure returns the same order.
   const submissionKeyRef = useRef<string | null>(null)
   const submissionInFlightRef = useRef(false)
 
-  const estimatedDelivery = deliveryFee(settings, cartTotal, fulfillmentMethod)
-  const total = cartTotal + estimatedDelivery
+  // Coupon: the server quotes the discount for the current subtotal and applies it for real on the order.
+  const [couponInput, setCouponInput] = useState("")
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null)
+  const [couponError, setCouponError] = useState<string | null>(null)
+  const [couponBusy, setCouponBusy] = useState(false)
+  const appliedCode = coupon?.code
+
+  const estimatedDelivery = coupon?.freeShipping ? 0 : deliveryFee(settings, cartTotal, fulfillmentMethod)
+  const discount = Math.min(coupon?.discount ?? 0, cartTotal)
+  const total = cartTotal - discount + estimatedDelivery
+
+  const quoteCoupon = useCallback(async (code: string, subtotal: number) => {
+    const quote = await fetchApi<Record<string, unknown>>("/api/account/coupons/quote", {
+      method: "POST",
+      body: JSON.stringify({ code, subtotal }),
+    })
+    return {
+      code: String(quote.code ?? code),
+      discount: Number(quote.discount ?? 0),
+      freeShipping: Boolean(quote.freeShipping),
+    }
+  }, [])
+
+  async function applyCoupon() {
+    const code = couponInput.trim()
+    if (!code || couponBusy) return
+    setCouponBusy(true)
+    setCouponError(null)
+    try {
+      setCoupon(await quoteCoupon(code, cartTotal))
+      setCouponInput("")
+    } catch (err) {
+      setCoupon(null)
+      setCouponError(err instanceof Error ? err.message : "This coupon could not be applied.")
+    } finally {
+      setCouponBusy(false)
+    }
+  }
+
+  // A percentage discount depends on the subtotal, so it is re-quoted when the cart changes.
+  useEffect(() => {
+    if (!appliedCode) return
+    let active = true
+    quoteCoupon(appliedCode, cartTotal)
+      .then((next) => {
+        if (active) setCoupon(next)
+      })
+      .catch((err) => {
+        if (!active) return
+        setCoupon(null)
+        setCouponError(err instanceof Error ? err.message : "This coupon can no longer be applied.")
+      })
+    return () => {
+      active = false
+    }
+  }, [appliedCode, cartTotal, quoteCoupon])
   const paymentMethods = useMemo(() => {
     const methods = [
       ...(settings.cashOnDeliveryEnabled ? ["Cash on Delivery"] : []),
@@ -109,7 +174,7 @@ export function CheckoutView() {
   }, [paymentMethod, paymentMethods])
 
   useEffect(() => {
-    if (!settings.storePickupEnabled && fulfillmentMethod === "PICKUP") setFulfillmentMethod("DELIVERY")
+    if (OFFERS_DELIVERY && !settings.storePickupEnabled && fulfillmentMethod === "PICKUP") setFulfillmentMethod("DELIVERY")
   }, [fulfillmentMethod, settings.storePickupEnabled])
 
   function updateDetail(field: keyof CheckoutDetails, value: string) {
@@ -127,8 +192,8 @@ export function CheckoutView() {
     .filter(Boolean)
     .join(", ")
   const shippingAddress =
-    fulfillmentMethod === "PICKUP"
-      ? `Store pickup at ${pickupAddress}`
+    collecting
+      ? `Collection from the store${pickupAddress ? `, ${pickupAddress}` : ""}`
       : [details.address, details.city, details.region]
           .map((value) => value.trim())
           .filter(Boolean)
@@ -156,6 +221,7 @@ export function CheckoutView() {
           delivery: estimatedDelivery,
           fulfillmentMethod,
           idempotencyKey: submissionKey,
+          couponCode: coupon?.code ?? null,
           items: cart.map((item) => {
             const numericId = Number(item.product.id)
             return {
@@ -187,7 +253,8 @@ export function CheckoutView() {
         : []
       const subtotal = Number(created.subtotal ?? items.reduce((sum, item) => sum + item.price * item.quantity, 0))
       const orderTotal = Number(created.total ?? subtotal)
-      const delivery = Number(created.delivery ?? Math.max(0, orderTotal - subtotal))
+      const orderDiscount = Number(created.discount ?? 0)
+      const delivery = Number(created.delivery ?? Math.max(0, orderTotal - subtotal + orderDiscount))
 
       addOrder({
         id: orderNumber,
@@ -223,6 +290,8 @@ export function CheckoutView() {
         shippingAddress: String(created.shippingAddress ?? shippingAddress),
         subtotal,
         delivery,
+        discount: orderDiscount,
+        couponCode: created.couponCode ? String(created.couponCode) : null,
         total: orderTotal,
         items,
         whatsappLink,
@@ -256,7 +325,7 @@ export function CheckoutView() {
             <p className="mt-1 text-sm text-muted-foreground">
               Order <span className="font-bold text-foreground">{confirmed.orderNumber}</span> is saved with status{" "}
               <span className="font-bold capitalize text-foreground">{confirmed.status.toLowerCase()}</span>.
-              {" "}The store will contact you to confirm delivery and payment.
+              {" "}The store will contact you to confirm {OFFERS_DELIVERY ? "delivery" : "collection"} and payment.
             </p>
           </div>
         </div>
@@ -283,22 +352,32 @@ export function CheckoutView() {
             <dt className="text-muted-foreground">Subtotal</dt>
             <dd className="font-semibold">{formatPrice(confirmed.subtotal, currency)}</dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">Delivery</dt>
-            <dd className="font-semibold">
-              {confirmed.delivery > 0 ? formatPrice(confirmed.delivery, currency) : "Free"}
-            </dd>
-          </div>
+          {confirmed.discount > 0 && (
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">
+                Discount{confirmed.couponCode ? ` (${confirmed.couponCode})` : ""}
+              </dt>
+              <dd className="font-semibold text-success">-{formatPrice(confirmed.discount, currency)}</dd>
+            </div>
+          )}
+          {(OFFERS_DELIVERY || confirmed.delivery > 0) && (
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">Delivery</dt>
+              <dd className="font-semibold">
+                {confirmed.delivery > 0 ? formatPrice(confirmed.delivery, currency) : "Free"}
+              </dd>
+            </div>
+          )}
           <div className="flex justify-between gap-4 text-base">
             <dt className="font-bold">Total</dt>
             <dd className="font-bold">{formatPrice(confirmed.total, currency)}</dd>
           </div>
           <div className="flex justify-between gap-4 border-t border-border pt-2">
             <dt className="text-muted-foreground">Payment</dt>
-            <dd className="font-semibold">{confirmed.payment}</dd>
+            <dd className="font-semibold">{paymentLabel(confirmed.payment)}</dd>
           </div>
           <div className="flex justify-between gap-4">
-            <dt className="shrink-0 text-muted-foreground">Deliver to</dt>
+            <dt className="shrink-0 text-muted-foreground">{OFFERS_DELIVERY ? "Deliver to" : "Collection"}</dt>
             <dd className="text-right font-semibold">{confirmed.shippingAddress}</dd>
           </div>
         </dl>
@@ -370,7 +449,7 @@ export function CheckoutView() {
     <form onSubmit={handleReview} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
       <div className="grid gap-5">
         <ol className="flex items-center gap-2 text-sm" aria-label="Checkout steps">
-          {["Your details", "Review & place order"].map((step, index) => {
+          {[OFFERS_DELIVERY ? "Delivery & payment" : "Details & payment", "Review & place order"].map((step, index) => {
             const active = Number(reviewing) === index
             return (
               <li key={step} className="flex items-center gap-2" aria-current={active ? "step" : undefined}>
@@ -395,9 +474,15 @@ export function CheckoutView() {
           <>
             <section className="sf-card p-4 sm:p-6" aria-labelledby="checkout-delivery">
               <h2 id="checkout-delivery" className="text-base font-bold text-foreground sm:text-lg">
-                Delivery
+                {OFFERS_DELIVERY ? "Delivery" : "Your details"}
               </h2>
-              {settings.storePickupEnabled && (
+              {!OFFERS_DELIVERY && (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Orders are collected from our store{pickupAddress ? ` in ${pickupAddress}` : ""}. We will contact you
+                  when yours is ready.
+                </p>
+              )}
+              {OFFERS_DELIVERY && settings.storePickupEnabled && (
                 <fieldset className="mt-3 grid gap-2 sm:grid-cols-2">
                   <legend className="sr-only">Choose delivery or pickup</legend>
                   {fulfillmentOptions.map((option) => (
@@ -444,7 +529,7 @@ export function CheckoutView() {
                   Phone
                   <input required name="phone" type="tel" autoComplete="tel" pattern={PHONE_PATTERN} title="7 to 30 digits; you may include +, spaces, brackets and dashes" className="sf-input mt-1 font-normal" value={details.phone} onChange={(event) => updateDetail("phone", event.target.value)} placeholder="+255 700 000 000" />
                 </label>
-                {fulfillmentMethod === "DELIVERY" && (
+                {!collecting && (
                   <>
                     <label className="sf-label sm:col-span-2">
                       Address
@@ -485,13 +570,13 @@ export function CheckoutView() {
                       onChange={() => setPaymentMethod(method)}
                       className="accent-[var(--primary)]"
                     />
-                    {method}
+                    {paymentLabel(method)}
                   </label>
                 ))}
               </fieldset>
               <p className="mt-3 text-xs text-muted-foreground">
                 No payment is taken on this website. After you place the order, WhatsApp opens so the store can confirm
-                availability, delivery and payment with you.
+                availability, {OFFERS_DELIVERY ? "delivery" : "collection"} and payment with you.
               </p>
             </section>
           </>
@@ -522,19 +607,23 @@ export function CheckoutView() {
                 <dd className="break-words font-semibold text-foreground">{details.email}</dd>
               </div>
               <div>
-                <dt className="text-muted-foreground">{fulfillmentMethod === "PICKUP" ? "Collection" : "Delivery address"}</dt>
+                <dt className="text-muted-foreground">{collecting ? "Collection" : "Delivery address"}</dt>
                 <dd className="font-semibold text-foreground">{shippingAddress}</dd>
               </div>
               <div>
                 <dt className="text-muted-foreground">Payment</dt>
-                <dd className="font-semibold text-foreground">{paymentMethod}</dd>
+                <dd className="font-semibold text-foreground">{paymentLabel(paymentMethod)}</dd>
               </div>
             </dl>
           </section>
         )}
       </div>
 
-      <aside aria-label="Order summary" className="sf-card sf-sticky-below-header p-4 sm:p-5">
+      {/* While reviewing, phones and tablets get the place-order panel first. */}
+      <aside
+        aria-label="Order summary"
+        className={cn("sf-card sf-sticky-below-header p-4 sm:p-5", reviewing && "max-lg:order-first")}
+      >
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-base font-bold text-foreground">Order summary</h2>
           <Link href="/cart" className="text-[13px] font-semibold text-primary hover:underline">
@@ -575,17 +664,78 @@ export function CheckoutView() {
             <dt className="text-muted-foreground">Subtotal</dt>
             <dd className="font-semibold text-foreground">{formatPrice(cartTotal, currency)}</dd>
           </div>
-          <div className="flex justify-between gap-4">
-            <dt className="text-muted-foreground">{fulfillmentMethod === "PICKUP" ? "Store pickup" : "Delivery"}</dt>
-            <dd className="font-semibold text-foreground">
-              {estimatedDelivery > 0 ? formatPrice(estimatedDelivery, currency) : "Free"}
-            </dd>
-          </div>
+          {coupon && (
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">
+                Coupon {coupon.code}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCoupon(null)
+                    setCouponError(null)
+                  }}
+                  className="ml-2 text-[13px] font-semibold text-primary hover:underline"
+                >
+                  Remove
+                </button>
+              </dt>
+              <dd className="font-semibold text-success">
+                {coupon.freeShipping ? (OFFERS_DELIVERY ? "Free delivery" : "Applied") : `-${formatPrice(discount, currency)}`}
+              </dd>
+            </div>
+          )}
+          {OFFERS_DELIVERY && (
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted-foreground">{fulfillmentMethod === "PICKUP" ? "Store pickup" : "Delivery"}</dt>
+              <dd className="font-semibold text-foreground">
+                {estimatedDelivery > 0 ? formatPrice(estimatedDelivery, currency) : "Free"}
+              </dd>
+            </div>
+          )}
           <div className="flex justify-between gap-4 border-t border-border pt-3 text-base">
             <dt className="font-bold text-foreground">Total</dt>
             <dd className="font-bold text-foreground">{formatPrice(total, currency)}</dd>
           </div>
         </dl>
+
+        {!coupon && (
+          <div className="mt-3">
+            <label htmlFor="checkout-coupon" className="sf-label">
+              Coupon code
+            </label>
+            <div className="mt-1 flex gap-2">
+              <input
+                id="checkout-coupon"
+                value={couponInput}
+                onChange={(event) => setCouponInput(event.target.value.toUpperCase())}
+                onKeyDown={(event) => {
+                  // Enter applies the code instead of submitting the checkout form.
+                  if (event.key === "Enter") {
+                    event.preventDefault()
+                    void applyCoupon()
+                  }
+                }}
+                maxLength={40}
+                autoComplete="off"
+                className="sf-input min-w-0 flex-1 font-normal"
+                placeholder="Enter code"
+              />
+              <button
+                type="button"
+                onClick={applyCoupon}
+                disabled={!couponInput.trim() || couponBusy}
+                className="sf-btn sf-btn-outline shrink-0"
+              >
+                {couponBusy ? "Checking…" : "Apply"}
+              </button>
+            </div>
+          </div>
+        )}
+        {couponError && (
+          <p role="alert" className="mt-2 text-sm text-destructive">
+            {couponError}
+          </p>
+        )}
 
         {error && (
           <p role="alert" className="mt-3 rounded-md bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
@@ -596,11 +746,11 @@ export function CheckoutView() {
         {reviewing ? (
           <button type="button" onClick={placeOrder} disabled={saving} className="sf-btn sf-btn-primary mt-4 w-full">
             {saving && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
-            {saving ? "Placing order…" : "Place order"}
+            {saving ? "Placing order…" : "Place your order"}
           </button>
         ) : (
           <button type="submit" className="sf-btn sf-btn-primary mt-4 w-full">
-            Review order
+            Continue to review
           </button>
         )}
         <p className="mt-2 text-center text-xs text-muted-foreground">

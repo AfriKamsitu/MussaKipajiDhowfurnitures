@@ -34,7 +34,7 @@ export type Order = {
   date: string
   status: "Processing" | "Shipped" | "Delivered" | "Cancelled" | "Pending"
   total: number
-  items: { name: string; image: string; quantity: number; price: number }[]
+  items: { name: string; image: string; quantity: number; price: number; productId?: string }[]
 }
 
 export type Role = "admin" | "customer"
@@ -171,6 +171,7 @@ function mapOrder(raw: Record<string, unknown>): Order {
     total: Number(raw.total ?? 0),
     items: Array.isArray(raw.items)
       ? (raw.items as Record<string, unknown>[]).map((item) => ({
+          productId: item.productId != null ? String(item.productId) : undefined,
           name: String(item.name ?? ""),
           image: String(item.image ?? "/placeholder.svg"),
           quantity: Number(item.quantity ?? 1),
@@ -218,7 +219,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
         const me = await fetchApi<BackendUser>("/api/auth/me")
-        const orders = await loadOrders().catch(() => cachedUser?.orders ?? [])
+        // Order history belongs to buyer accounts; the API refuses it for admins.
+        const orders = normalizeRole(me.role) === "admin" ? [] : await loadOrders().catch(() => cachedUser?.orders ?? [])
         const next = toUser(me, orders)
         setUser(next)
         setStoredUser(next)
@@ -242,7 +244,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (payload: AuthResponse) => {
       if (payload.accessToken) setAuthToken(payload.accessToken)
       if (!payload.user) throw new Error("Authentication response missing user.")
-      const orders = await loadOrders().catch(() => [])
+      const orders = normalizeRole(payload.user.role) === "admin" ? [] : await loadOrders().catch(() => [])
       const next = toUser(payload.user, orders)
       setUser(next)
       setStoredUser(next)

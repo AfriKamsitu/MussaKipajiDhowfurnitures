@@ -4,13 +4,14 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
+import { ProductGrid, ProductGridSkeleton } from "@/components/product-card"
+import { RecentlyViewedShelf } from "@/components/recently-viewed-shelf"
 import { useCategories } from "@/components/categories-provider"
 import { SafeImage as Image } from "@/components/safe-image"
 import { EmptyState, ErrorState } from "@/components/state-panels"
-import { useStore } from "@/components/store-provider"
 import { useStoreSettings } from "@/components/store-settings-provider"
-import { discountPercent, isAvailable, listCatalog, productHref } from "@/lib/catalog"
-import { formatPrice, type Category, type Product } from "@/lib/data"
+import { discountPercent, isAvailable, listCatalog } from "@/lib/catalog"
+import type { Product } from "@/lib/data"
 import { cn } from "@/lib/utils"
 
 const NEW_ARRIVALS = 8
@@ -136,104 +137,6 @@ function HeroSlider({ slides }: { slides: Slide[] }) {
   )
 }
 
-/** Quiet gallery tile: picture on a soft grey field, then category, name and price. */
-function ProductTile({ product, categoryName, priority }: { product: Product; categoryName: string; priority: boolean }) {
-  const { user } = useAuth()
-  const { currency } = useStoreSettings()
-  const { addToCart } = useStore()
-  const available = isAvailable(product)
-  const discount = discountPercent(product)
-  const canQuickAdd = available && user?.role !== "admin"
-
-  return (
-    <article className="sf-reveal group relative">
-      <div className="relative aspect-square overflow-hidden bg-[#f4f3f1]">
-        <Image
-          src={product.image || "/placeholder.svg"}
-          alt=""
-          fill
-          priority={priority}
-          sizes="(max-width: 640px) 50vw, (max-width: 1240px) 25vw, 286px"
-          className={cn(
-            "object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]",
-            !available && "opacity-70",
-          )}
-        />
-        {!available ? (
-          <span className="absolute left-2.5 top-2.5 bg-[#4a4541] px-2 py-1 text-[9px] font-medium uppercase tracking-[0.16em] text-white">
-            Sold out
-          </span>
-        ) : discount ? (
-          <span className="absolute left-2.5 top-2.5 bg-[#6b2b2b] px-2 py-1 text-[9px] font-medium uppercase tracking-[0.16em] text-white">
-            On sale
-          </span>
-        ) : null}
-
-        {canQuickAdd && (
-          <button
-            type="button"
-            onClick={() => addToCart(product, Math.max(1, product.moq ?? 1), product.colors[0])}
-            aria-label={`Add ${product.name} to cart`}
-            className="absolute inset-x-2.5 bottom-2.5 z-10 min-h-10 bg-white/95 text-[10px] font-medium uppercase tracking-[0.18em] text-[#2a211b] opacity-0 transition-opacity duration-200 hover:bg-[#2a211b] hover:text-white focus-visible:opacity-100 group-hover:opacity-100 [@media(hover:none)]:hidden"
-          >
-            Add to cart
-          </button>
-        )}
-      </div>
-
-      <div className="pt-3">
-        <p className="text-[9px] uppercase tracking-[0.18em] text-[#2a211b]/55">{categoryName}</p>
-        <h3 className="mt-1 text-[13px] text-[#2a211b] sm:text-sm">
-          <Link href={productHref(product)} className="line-clamp-2 after:absolute after:inset-0 after:content-[''] group-hover:text-[#6b2b2b]">
-            {product.name}
-          </Link>
-        </h3>
-        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-2 text-[12px] text-[#2a211b]/80 sm:text-[13px]">
-          <span className={cn(discount && "text-[#6b2b2b]")}>{formatPrice(product.price, currency)}</span>
-          {discount && product.oldPrice && (
-            <span className="text-[#2a211b]/45 line-through">
-              <span className="sr-only">Was </span>
-              {formatPrice(product.oldPrice, currency)}
-            </span>
-          )}
-        </p>
-      </div>
-    </article>
-  )
-}
-
-function TileGrid({ products, categories, priorityCount = 0 }: { products: Product[]; categories: Category[]; priorityCount?: number }) {
-  const names = useMemo(() => new Map(categories.map((category) => [category.slug, category.name])), [categories])
-  return (
-    <ul className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-10 lg:grid-cols-4">
-      {products.map((product, index) => (
-        <li key={product.id} className="min-w-0">
-          <ProductTile
-            product={product}
-            categoryName={names.get(product.category) ?? product.category.replace(/-/g, " ")}
-            priority={index < priorityCount}
-          />
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-function TileGridSkeleton() {
-  return (
-    <div role="status" aria-label="Loading furniture" className="grid grid-cols-2 gap-x-3 gap-y-8 sm:gap-x-5 sm:gap-y-10 lg:grid-cols-4">
-      {Array.from({ length: 8 }, (_, index) => (
-        <div key={index} aria-hidden="true">
-          <div className="sf-skeleton aspect-square rounded-none" />
-          <div className="sf-skeleton mt-3 h-3 w-1/3" />
-          <div className="sf-skeleton mt-2 h-4 w-3/4" />
-          <div className="sf-skeleton mt-2 h-3 w-1/4" />
-        </div>
-      ))}
-    </div>
-  )
-}
-
 export function HomeView({
   initialProducts,
 }: {
@@ -242,6 +145,7 @@ export function HomeView({
 }) {
   const settings = useStoreSettings()
   const categories = useCategories()
+  const { user, loading: authLoading } = useAuth()
   const [products, setProducts] = useState<Product[] | null>(initialProducts)
   const [failed, setFailed] = useState(false)
 
@@ -308,7 +212,7 @@ export function HomeView({
           {failed ? (
             <ErrorState title="We couldn't load the furniture" onRetry={loadProducts} />
           ) : products === null ? (
-            <TileGridSkeleton />
+            <ProductGridSkeleton count={8} />
           ) : arrivals.length === 0 ? (
             <EmptyState title="New furniture is on its way" description="Our catalog is being prepared. Please check back soon.">
               <Link href="/contact" className={outlineButton}>
@@ -317,7 +221,7 @@ export function HomeView({
             </EmptyState>
           ) : (
             <>
-              <TileGrid products={arrivals} categories={categories} priorityCount={4} />
+              <ProductGrid products={arrivals} priorityCount={4} />
               <div className="mt-10 text-center sm:mt-12">
                 <Link href="/shop" className={outlineButton}>
                   View all furniture
@@ -362,12 +266,32 @@ export function HomeView({
             On sale
           </h2>
           <div className="mt-8 sm:mt-10">
-            <TileGrid products={onSale} categories={categories} />
+            <ProductGrid products={onSale} />
           </div>
           <div className="mt-10 text-center">
             <Link href="/offers" className={outlineButton}>
               View all offers
             </Link>
+          </div>
+        </section>
+      )}
+
+      {/* Browsing history, as on a marketplace home page; hidden until something has been viewed. */}
+      <RecentlyViewedShelf className={cn(container, "pt-14 sm:pt-20")} />
+
+      {!authLoading && !user && (
+        <section aria-label="Sign in" className={cn(container, "pt-14 sm:pt-20")}>
+          <div className="flex flex-col items-center gap-3 border-y border-black/10 py-8 text-center">
+            <p className="text-sm text-[#2a211b]">Sign in to track orders and check out faster.</p>
+            <Link href="/login" className={solidButton}>
+              Sign in
+            </Link>
+            <p className="text-xs text-[#2a211b]/70">
+              New customer?{" "}
+              <Link href="/register" className="text-[#6b2b2b] underline underline-offset-4">
+                Start here
+              </Link>
+            </p>
           </div>
         </section>
       )}

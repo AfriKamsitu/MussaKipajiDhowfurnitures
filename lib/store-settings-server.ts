@@ -11,12 +11,12 @@ type ServerStoreSettings = {
 }
 
 const fallbackSettings: ServerStoreSettings = {
-  storeName: "Paje Dhow Furniture",
-  metaTitle: "Paje Dhow Furniture - Handcrafted Living",
+  storeName: "Kipaji Dhow Furniture",
+  metaTitle: "Kipaji Dhow Furniture - Handcrafted Living",
   metaDescription:
     "Discover handcrafted furniture for every room, made with care in Zanzibar.",
   searchIndexingEnabled: true,
-  logoUrl: "/paje-dhow-furniture-logo.jpeg",
+  logoUrl: "/kipaji-dhow-furniture-logo.jpg",
 }
 
 function backendUrl() {

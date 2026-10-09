@@ -96,7 +96,7 @@ export function AddressesView() {
             <MapPin className="size-7" />
           </span>
           <h2 className="text-lg font-semibold text-foreground">No saved addresses</h2>
-          <p className="text-sm text-muted-foreground">Add a delivery address to speed up checkout.</p>
+          <p className="text-sm text-muted-foreground">Add an address so we can reach you about your orders.</p>
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">

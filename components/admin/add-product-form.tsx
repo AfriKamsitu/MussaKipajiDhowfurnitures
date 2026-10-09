@@ -1,12 +1,15 @@
 "use client"
 
 import { FormEvent, useEffect, useState } from "react"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 import {
-  UploadCloud,
-} from "lucide-react"
-import { deleteUploadedImages, fetchApi, uploadImage } from "@/lib/api"
+  ProductImagesField,
+  savedImageItems,
+  uploadImageItems,
+  type ProductImageItem,
+} from "@/components/admin/product-images-field"
+import { deleteUploadedImages, fetchApi } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { useStoreSettings } from "@/components/store-settings-provider"
 
@@ -23,7 +26,6 @@ type ProductFormState = {
   oldPrice: string
   sku: string
   stock: string
-  image: string
   shortDescription: string
   description: string
   material: string
@@ -41,7 +43,6 @@ const initialState: ProductFormState = {
   oldPrice: "",
   sku: "",
   stock: "0",
-  image: "",
   shortDescription: "",
   description: "",
   material: "",
@@ -61,14 +62,20 @@ function FieldCard({ title, children }: { title: string; children: React.ReactNo
   )
 }
 
-export function AddProductForm() {
+/** Create form, or the edit form when `productId` is given. */
+export function AddProductForm({ productId }: { productId?: string }) {
   const router = useRouter()
   const { currency } = useStoreSettings()
+  const editing = Boolean(productId)
   const [featured, setFeatured] = useState(true)
   const [form, setForm] = useState<ProductFormState>(initialState)
   const [categories, setCategories] = useState<string[]>([])
-  const [imageFiles, setImageFiles] = useState<File[]>([])
-  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [images, setImages] = useState<ProductImageItem[]>([])
+  /** Images the product had when the form opened; ones removed here are deleted from disk after saving. */
+  const [originalImages, setOriginalImages] = useState<string[]>([])
+  const [supplierId, setSupplierId] = useState<number | null>(null)
+  const [loading, setLoading] = useState(editing)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
@@ -85,19 +92,55 @@ export function AddProductForm() {
       .catch(() => setCategories([]))
   }, [])
 
+  useEffect(() => {
+    if (!productId) return
+    let active = true
+    setLoading(true)
+    setLoadError(null)
+    fetchApi<Record<string, unknown>>(`/api/admin/products/${productId}`)
+      .then((product) => {
+        if (!active) return
+        const status = String(product.status ?? "PUBLISHED").toUpperCase()
+        setForm({
+          name: String(product.name ?? ""),
+          category: String(product.category ?? ""),
+          price: product.price != null ? String(product.price) : "",
+          oldPrice: product.oldPrice != null ? String(product.oldPrice) : "",
+          sku: String(product.sku ?? ""),
+          stock: String(product.stock ?? 0),
+          shortDescription: String(product.shortDescription ?? ""),
+          description: String(product.description ?? ""),
+          material: String(product.material ?? ""),
+          colors: Array.isArray(product.colors) ? product.colors.join(", ") : "",
+          moq: String(product.moq ?? 1),
+          warrantyMonths: String(product.warrantyMonths ?? 12),
+          deliveryDays: String(product.deliveryDays ?? 5),
+          status: status === "DRAFT" || status === "ARCHIVED" ? status : "PUBLISHED",
+        })
+        setFeatured(Boolean(product.isNew))
+        const supplier = product.supplier as { id?: number } | null | undefined
+        setSupplierId(supplier?.id ?? null)
+        const paths = [
+          product.image ? String(product.image) : "",
+          ...(Array.isArray(product.images) ? product.images.map(String) : []),
+        ]
+        const saved = savedImageItems(paths)
+        setImages(saved)
+        setOriginalImages(saved.map((item) => item.url))
+      })
+      .catch((err) => {
+        if (active) setLoadError(err instanceof Error ? err.message : "The product could not be loaded.")
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+    return () => {
+      active = false
+    }
+  }, [productId])
+
   function update<K extends keyof ProductFormState>(key: K, value: ProductFormState[K]) {
     setForm((current) => ({ ...current, [key]: value }))
-  }
-
-  function handleImageChange(files: FileList | null) {
-    const list = files ? Array.from(files) : []
-    setImageFiles(list)
-    if (!list.length) {
-      setImagePreviews([])
-      update("image", "")
-      return
-    }
-    setImagePreviews(list.map((file) => URL.createObjectURL(file)))
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -105,6 +148,7 @@ export function AddProductForm() {
     setError(null)
     setSuccess(null)
     const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
+    // "Save Draft" forces a draft; "Publish" on a new product always publishes.
     const status = submitter?.value === "draft" ? "DRAFT" : form.status
 
     if (!form.name.trim() || !form.category.trim() || !form.price.trim()) {
@@ -112,19 +156,19 @@ export function AddProductForm() {
       return
     }
 
+    if (form.oldPrice && Number(form.oldPrice) <= Number(form.price)) {
+      setError("Compare price must be higher than the selling price, or left empty.")
+      return
+    }
+
     setSaving(true)
-    const uploadedImages: string[] = []
+    let uploadedImages: string[] = []
     try {
-      for (const imageFile of imageFiles) {
-        uploadedImages.push(await uploadImage(imageFile))
-      }
-      const imagePaths = uploadedImages.length
-        ? uploadedImages
-        : form.image.trim()
-          ? [form.image.trim()]
-          : []
-      await fetchApi("/api/admin/products", {
-        method: "POST",
+      const result = await uploadImageItems(images)
+      uploadedImages = result.uploaded
+      const imagePaths = result.paths
+      await fetchApi(editing ? `/api/admin/products/${productId}` : "/api/admin/products", {
+        method: editing ? "PUT" : "POST",
         body: JSON.stringify({
           name: form.name.trim(),
           category: form.category.trim().toLowerCase().replace(/\s+/g, "-"),
@@ -146,9 +190,13 @@ export function AddProductForm() {
           moq: form.moq ? Number(form.moq) : 1,
           warrantyMonths: form.warrantyMonths ? Number(form.warrantyMonths) : 12,
           deliveryDays: form.deliveryDays ? Number(form.deliveryDays) : 5,
+          supplierId,
         }),
       })
-      setSuccess("Product saved successfully.")
+      // Pictures taken out of the gallery are no longer referenced; remove their files.
+      const removed = originalImages.filter((saved) => !imagePaths.includes(saved))
+      if (removed.length) await deleteUploadedImages(removed).catch(() => undefined)
+      setSuccess(editing ? "Product updated successfully." : "Product saved successfully.")
       router.push("/admin/products")
       router.refresh()
     } catch (err) {
@@ -159,6 +207,22 @@ export function AddProductForm() {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div role="status" className="admin-panel flex items-center justify-center gap-2 rounded-xl border border-border p-12 text-sm text-muted-foreground">
+        <Loader2 className="size-4 animate-spin" aria-hidden="true" /> Loading product…
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        {loadError}
+      </div>
+    )
   }
 
   return (
@@ -285,42 +349,7 @@ export function AddProductForm() {
       {/* Right column */}
       <div className="space-y-6">
         <FieldCard title="Product Images">
-          <label className={labelCls}>Product Images</label>
-          <label className="group flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-card/45 px-4 py-8 text-center backdrop-blur-xl transition-[background-color,border-color,transform] hover:-translate-y-0.5 hover:border-primary/45 hover:bg-card/75">
-            <UploadCloud className="mb-2 size-8 text-muted-foreground transition-[color,transform] duration-300 group-hover:-translate-y-1 group-hover:scale-105 group-hover:text-primary" />
-            <span className="text-sm font-medium text-foreground">Choose images from computer</span>
-            <span className="mt-1 text-xs text-muted-foreground">Select more than one PNG, JPG, or WEBP</span>
-            <input
-              type="file"
-              accept="image/png,image/jpeg,image/webp"
-              multiple
-              className="sr-only"
-              onChange={(event) => handleImageChange(event.target.files)}
-            />
-          </label>
-          {imagePreviews.length > 0 && (
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {imagePreviews.map((preview, index) => (
-                <div key={preview} className="group overflow-hidden rounded-lg border border-white/65 bg-card/55 shadow-soft backdrop-blur-xl">
-                  <Image
-                    src={preview}
-                    alt={`Selected product preview ${index + 1}`}
-                    width={240}
-                    height={180}
-                    className="h-28 w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    unoptimized
-                  />
-                </div>
-              ))}
-            </div>
-          )}
-          {form.image && imagePreviews.length === 0 && (
-            <p className="mt-2 rounded-md bg-secondary px-3 py-2 text-xs text-muted-foreground">{form.image}</p>
-          )}
-          <div className="mt-3">
-            <label className={labelCls}>Saved Image Path</label>
-            <input value={form.image} readOnly className={inputCls} placeholder="Path appears after upload" />
-          </div>
+          <ProductImagesField items={images} onChange={setImages} disabled={saving} />
         </FieldCard>
 
         <FieldCard title="Product Status">

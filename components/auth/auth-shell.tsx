@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils"
 
 const perks = [
   "Save pieces and compare your shortlist",
-  "Track orders from workshop to delivery",
+  "Track orders from workshop to collection",
   "Request tailored finishes for your space",
 ]
 
@@ -144,10 +144,10 @@ export function AuthShell({
 
       <div className="relative z-10 grid min-h-screen lg:grid-cols-[minmax(0,1.05fr)_minmax(470px,0.95fr)]">
         <div className="hidden min-h-screen flex-col justify-between p-10 text-white lg:flex xl:p-14">
-          <Link href="/" className="w-fit" aria-label="Go to Paje Dhow Furniture home page">
+          <Link href="/" className="w-fit" aria-label="Go to Kipaji Dhow Furniture home page">
             <Image
-              src="/paje-dhow-furniture-logo.jpeg"
-              alt="Paje Dhow Furniture logo"
+              src="/kipaji-dhow-furniture-logo.jpg"
+              alt="Kipaji Dhow Furniture logo"
               width={82}
               height={82}
               className="size-[82px] rounded-2xl object-cover shadow-2xl ring-1 ring-white/20"
@@ -173,7 +173,7 @@ export function AuthShell({
 
           <div className="flex items-center justify-between gap-6">
             {carouselControls()}
-            <p className="text-xs text-white/60">&copy; {new Date().getFullYear()} Paje Dhow Furniture</p>
+            <p className="text-xs text-white/60">&copy; {new Date().getFullYear()} Kipaji Dhow Furniture</p>
           </div>
         </div>
 
@@ -185,10 +185,10 @@ export function AuthShell({
             )}
           >
             <div className="mb-7 flex items-center justify-between gap-3 sm:mb-8">
-              <Link href="/" aria-label="Go to Paje Dhow Furniture home page">
+              <Link href="/" aria-label="Go to Kipaji Dhow Furniture home page">
                 <Image
-                  src="/paje-dhow-furniture-logo.jpeg"
-                  alt="Paje Dhow Furniture logo"
+                  src="/kipaji-dhow-furniture-logo.jpg"
+                  alt="Kipaji Dhow Furniture logo"
                   width={58}
                   height={58}
                   className="size-[58px] rounded-xl object-cover shadow-soft"

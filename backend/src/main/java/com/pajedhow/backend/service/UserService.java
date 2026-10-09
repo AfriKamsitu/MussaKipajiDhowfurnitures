@@ -15,6 +15,7 @@ import com.pajedhow.backend.mapper.Mappers;
 import com.pajedhow.backend.repository.OrderRepository;
 import com.pajedhow.backend.repository.ReviewRepository;
 import com.pajedhow.backend.repository.UserRepository;
+import com.pajedhow.backend.util.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -145,7 +146,7 @@ public class UserService {
                 .status(parseStatus(req.status()))
                 .build();
         User saved = userRepository.save(user);
-        activityLog.record("Admin", "created staff account", saved.getEmail());
+        activityLog.record(SecurityUtils.actorName(), "created staff account", saved.getEmail());
         return Mappers.toUser(saved);
     }
 
@@ -186,7 +187,7 @@ public class UserService {
         }
         guardAdministratorContinuity(user, actorId, AccountStatus.INACTIVE, true);
         userRepository.delete(user);
-        activityLog.record("Admin", "deleted account", user.getEmail());
+        activityLog.record(SecurityUtils.actorName(), "deleted account", user.getEmail());
     }
 
     // ---------- Customers (admin) ----------
@@ -223,7 +224,7 @@ public class UserService {
                 .status(parseStatus(req.status()))
                 .build();
         User saved = userRepository.save(user);
-        activityLog.record("Admin", "created customer account", saved.getEmail());
+        activityLog.record(SecurityUtils.actorName(), "created customer account", saved.getEmail());
         return Mappers.toUser(saved);
     }
 
@@ -268,7 +269,7 @@ public class UserService {
                     "Customers with review history cannot be deleted. Set the account to inactive instead.");
         }
         userRepository.delete(user);
-        activityLog.record("Admin", "deleted customer account", user.getEmail());
+        activityLog.record(SecurityUtils.actorName(), "deleted customer account", user.getEmail());
     }
 
     @Transactional

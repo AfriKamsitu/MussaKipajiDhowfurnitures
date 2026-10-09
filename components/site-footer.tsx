@@ -36,12 +36,19 @@ export function SiteFooter() {
 
   return (
     <>
-      <footer className="mt-auto bg-header pb-20 text-[#f6f0e6] md:pb-0">
+      <footer className="mt-auto bg-header pb-20 text-[#f6f0e6] lg:pb-0">
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          className="block min-h-11 w-full bg-header-muted text-center text-[13px] text-white hover:bg-[#4a3d33]"
+        >
+          Back to top
+        </button>
         <div className="sf-container grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.3fr]">
           <div>
             <Link href="/" className="flex items-center gap-2.5" aria-label={`${settings.storeName} home`}>
-              <span className="relative size-10 shrink-0 overflow-hidden rounded-full bg-white">
-                <Image src={settings.logoUrl} alt="" fill sizes="40px" className="object-cover" unoptimized />
+              <span className="relative size-12 shrink-0 overflow-hidden rounded-full bg-white">
+                <Image src={settings.logoUrl} alt="" fill sizes="48px" className="object-cover" unoptimized />
               </span>
               <span className="text-base font-bold">{settings.storeName}</span>
             </Link>

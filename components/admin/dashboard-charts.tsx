@@ -31,14 +31,20 @@ const CHART_COLORS = [
   "var(--chart-5)",
 ]
 
+/** 1,250,000 → 1.3M, 82,000 → 82K. Keeps axis and donut labels short in any currency. */
+function compactAmount(value: number) {
+  return new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 }).format(value)
+}
+
 export function SalesOverviewChart({
   data = [],
 }: {
   data?: Array<{ day: string; value: number }>
 }) {
   const { currency } = useStoreSettings()
-  if (!data.length) {
-    return <p className="py-16 text-center text-sm text-muted-foreground">No sales data yet</p>
+  // A week with no revenue reads better as a message than as a flat line on a meaningless axis.
+  if (!data.some((point) => Number(point.value) > 0)) {
+    return <p className="py-16 text-center text-sm text-muted-foreground">No sales in the last 7 days</p>
   }
 
   return (
@@ -57,7 +63,8 @@ export function SalesOverviewChart({
           axisLine={false}
           width={42}
           fontSize={11}
-          tickFormatter={(v) => `${v / 1_000_000}M`}
+          allowDecimals={false}
+          tickFormatter={(v) => compactAmount(Number(v))}
         />
         <ChartTooltip
           content={
@@ -77,14 +84,17 @@ export function SalesOverviewChart({
   )
 }
 
+/** `formatValue` turns a slice's number into its legend label (plain count by default). */
 function DonutChart({
   data,
   centerLabel,
   centerValue,
+  formatValue,
 }: {
   data: { name: string; value: number; color: string }[]
   centerLabel: string
   centerValue: string
+  formatValue?: (value: number) => string
 }) {
   if (!data.length) {
     return <p className="py-10 text-center text-sm text-muted-foreground">No data yet</p>
@@ -132,7 +142,7 @@ function DonutChart({
               {d.name}
             </span>
             <span className="min-w-6 text-right font-semibold tabular-nums text-foreground">
-              {d.value}
+              {formatValue ? formatValue(d.value) : d.value}
             </span>
           </li>
         ))}
@@ -167,12 +177,14 @@ export function SalesByCategoryChart({
     value: d.value,
     color: d.color || CHART_COLORS[i % CHART_COLORS.length],
   }))
+  const { currency } = useStoreSettings()
   const total = chartData.reduce((sum, d) => sum + d.value, 0)
   return (
     <DonutChart
       data={chartData}
-      centerLabel="Total"
-      centerValue={total >= 1_000_000 ? `${(total / 1_000_000).toFixed(1)}M` : String(total)}
+      centerLabel={`Total (${currency})`}
+      centerValue={compactAmount(total)}
+      formatValue={(value) => formatPrice(value, currency)}
     />
   )
 }

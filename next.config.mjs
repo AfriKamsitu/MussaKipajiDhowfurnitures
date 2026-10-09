@@ -28,6 +28,11 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // This folder is the project root; without this Next.js picks up a stray lockfile in the user profile.
+  turbopack: { root: import.meta.dirname },
+  // The on-disk dev cache breaks when a cloud-synced folder (OneDrive) offloads its files
+  // ("Failed to open database", os error 388), so development keeps its cache in memory.
+  experimental: { turbopackFileSystemCacheForDev: false },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "lh3.googleusercontent.com" },

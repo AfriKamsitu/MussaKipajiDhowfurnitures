@@ -50,7 +50,9 @@ public final class OrderDtos {
             List<OrderItemResponse> items,
             List<OrderEventResponse> timeline,
             Instant createdAt,
-            Instant updatedAt
+            Instant updatedAt,
+            BigDecimal discount,
+            String couponCode
     ) {}
 
     public record OrderItemRequest(
@@ -76,8 +78,17 @@ public final class OrderDtos {
             @Pattern(
                     regexp = "^$|[A-Za-z0-9_-]{16,64}$",
                     message = "Idempotency key format is invalid"
-            ) String idempotencyKey
-    ) {}
+            ) String idempotencyKey,
+            @Size(max = 40) String couponCode
+    ) {
+        /** Orders placed without a coupon. */
+        public CreateOrderRequest(String customerName, String phone, String shippingAddress, String payment,
+                                  BigDecimal delivery, String fulfillmentMethod, List<OrderItemRequest> items,
+                                  String idempotencyKey) {
+            this(customerName, phone, shippingAddress, payment, delivery, fulfillmentMethod, items,
+                    idempotencyKey, null);
+        }
+    }
 
     public record UpdateStatusRequest(
             @NotBlank String status  // PENDING | PROCESSING | SHIPPED | DELIVERED | CANCELLED

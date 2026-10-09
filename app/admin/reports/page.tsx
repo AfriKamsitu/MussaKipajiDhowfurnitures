@@ -99,6 +99,8 @@ function reportCurrency(data: ReportData) {
   return new Intl.NumberFormat("en-TZ", {
     style: "currency",
     currency: data.currency || "TZS",
+    // Same "TZS 129,000" form as the rest of the admin and the storefront.
+    currencyDisplay: "code",
     maximumFractionDigits: data.currency === "USD" ? 2 : 0,
   })
 }

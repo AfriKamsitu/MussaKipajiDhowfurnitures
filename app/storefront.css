@@ -3,6 +3,11 @@
  * Colour tokens live in globals.css (:root); admin keeps its own .admin-theme.
  */
 
+/* Height of the sticky top bar (the category strip below it scrolls away). */
+:root {
+  --site-header-height: 56px;
+}
+
 @media (min-width: 1024px) {
   :root {
     --site-header-height: 64px;
@@ -330,27 +335,6 @@ body.sf-scroll-locked {
 @keyframes sf-card-slide {
   from { opacity: 0; translate: 24px 0; }
   to { opacity: 1; translate: 0 0; }
-}
-
-/* The quick-add bar appears on hover; touch devices go through the product page. */
-.sf-quick-add {
-  opacity: 0;
-  transition:
-    opacity 200ms ease,
-    background-color 160ms ease,
-    color 160ms ease;
-}
-
-.sf-product-card:hover .sf-quick-add,
-.sf-quick-add:focus-visible,
-.sf-quick-add[data-state="added"] {
-  opacity: 1;
-}
-
-@media (hover: none) {
-  .sf-quick-add {
-    display: none;
-  }
 }
 
 /* Saving a product: the heart pops once. */
