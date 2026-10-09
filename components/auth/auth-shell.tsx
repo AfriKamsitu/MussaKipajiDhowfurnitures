@@ -24,7 +24,7 @@ export function AuthShell({
   title,
   subtitle,
   children,
-  image = "/hero-living-room.png",
+  image = "/auth/workshop.jpg",
   images = [],
   placement = "Login Background",
   panelClassName,

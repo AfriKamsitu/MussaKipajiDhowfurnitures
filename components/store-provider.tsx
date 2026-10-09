@@ -1,12 +1,15 @@
 "use client"
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react"
+import { listLiveProducts } from "@/lib/catalog"
 import type { Product } from "@/lib/data"
 
 const CART_KEY = "furnicraft.cart"
 const WISHLIST_KEY = "furnicraft.wishlist"
 const RECENTLY_VIEWED_KEY = "furnicraft.recently-viewed"
 const RECENTLY_VIEWED_LIMIT = 8
+/** How often saved products are checked against the live catalogue. */
+const CATALOG_CHECK_INTERVAL_MS = 30_000
 
 function save(key: string, value: unknown) {
   try {
@@ -66,6 +69,8 @@ type StoreContextValue = {
   dismissCartNotice: () => void
   wishlist: Product[]
   recentlyViewed: Product[]
+  /** Whether a product is still on sale; null until the catalogue has been checked. */
+  isLiveProduct: ((id: string | number) => boolean) | null
   cartCount: number
   cartTotal: number
   wishlistCount: number
@@ -86,6 +91,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([])
   const [hydrated, setHydrated] = useState(false)
   const [cartNotice, setCartNotice] = useState<CartNotice | null>(null)
+  const [liveIds, setLiveIds] = useState<Set<string> | null>(null)
 
   // Hydrate from localStorage after mount to avoid SSR mismatch.
   useEffect(() => {
@@ -110,6 +116,47 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (hydrated) save(RECENTLY_VIEWED_KEY, recentlyViewed)
   }, [recentlyViewed, hydrated])
+
+  // Products the admin has deleted or unpublished must disappear from the cart,
+  // saved items and recently viewed, which are kept in this browser.
+  useEffect(() => {
+    if (!hydrated) return
+    let cancelled = false
+    let lastCheck = 0
+
+    async function syncWithCatalog() {
+      if (document.visibilityState === "hidden" || Date.now() - lastCheck < CATALOG_CHECK_INTERVAL_MS) return
+      lastCheck = Date.now()
+      const live = await listLiveProducts().catch(() => null)
+      if (cancelled || !live) return
+      const fresh = (products: Product[]) =>
+        products.flatMap((product) => {
+          const current = live.get(product.id)
+          return current ? [current] : []
+        })
+      setCart((prev) =>
+        prev.flatMap((item) => {
+          const product = live.get(item.product.id)
+          if (!product) return []
+          const quantity = Math.min(cartLimit(product), item.quantity)
+          return quantity > 0 ? [{ ...item, product, quantity }] : []
+        }),
+      )
+      setWishlist(fresh)
+      setRecentlyViewed(fresh)
+      setCartNotice((notice) => (notice && live.has(notice.product.id) ? notice : null))
+      setLiveIds(new Set(live.keys()))
+    }
+
+    void syncWithCatalog()
+    document.addEventListener("visibilitychange", syncWithCatalog)
+    window.addEventListener("focus", syncWithCatalog)
+    return () => {
+      cancelled = true
+      document.removeEventListener("visibilitychange", syncWithCatalog)
+      window.removeEventListener("focus", syncWithCatalog)
+    }
+  }, [hydrated])
 
   // Keep the cart and saved items consistent across open tabs.
   useEffect(() => {
@@ -195,6 +242,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     dismissCartNotice,
     wishlist,
     recentlyViewed,
+    isLiveProduct: liveIds ? (id) => liveIds.has(String(id)) : null,
     cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
     cartTotal: cart.reduce((sum, item) => sum + item.quantity * item.product.price, 0),
     wishlistCount: wishlist.length,

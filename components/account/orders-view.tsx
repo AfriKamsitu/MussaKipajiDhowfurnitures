@@ -6,6 +6,7 @@ import Image from "next/image"
 import { MessageCircle, Package, Search, Truck } from "lucide-react"
 import { useAuth, type Order } from "@/components/auth-provider"
 import { formatPrice } from "@/lib/data"
+import { useStore } from "@/components/store-provider"
 import { useStoreSettings } from "@/components/store-settings-provider"
 import { cn } from "@/lib/utils"
 import { OFFERS_DELIVERY, orderStatusLabel } from "@/lib/pricing"
@@ -31,6 +32,7 @@ function progressIndex(status: Order["status"]) {
 export function OrdersView() {
   const { currency } = useStoreSettings()
   const { user } = useAuth()
+  const { isLiveProduct } = useStore()
   const [status, setStatus] = useState<(typeof statuses)[number]>("All")
   const [query, setQuery] = useState("")
   if (!user) return null
@@ -176,7 +178,7 @@ export function OrdersView() {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{item.name}</p>
                       <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
-                      {item.productId && (
+                      {item.productId && isLiveProduct?.(item.productId) && (
                         <Link
                           href={`/product/${encodeURIComponent(item.productId)}`}
                           className="mt-1 inline-flex min-h-6 items-center text-xs font-semibold text-[#6b2b2b] underline-offset-4 hover:underline"

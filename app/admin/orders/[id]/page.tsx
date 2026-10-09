@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
+import Link from "next/link"
 import { useParams } from "next/navigation"
 import { Check, Printer } from "lucide-react"
 import { AdminCard, AdminPageHeader, StatusBadge } from "@/components/admin/admin-ui"
@@ -100,10 +101,10 @@ export default function OrderDetailsPage() {
         actions={
           <>
             <StatusBadge status={order.status} />
-            <button className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-secondary">
+            <Link href={`/admin/orders/${order.id}/invoice`} className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-secondary">
               <Printer className="size-4" />
-              Print Invoice
-            </button>
+              Create Invoice
+            </Link>
           </>
         }
       />

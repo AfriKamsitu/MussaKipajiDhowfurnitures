@@ -107,6 +107,21 @@ export async function listCatalog(query: Pick<ProductQuery, "q"> = {}): Promise<
   return [first, ...rest].flatMap((page) => page.content)
 }
 
+/**
+ * Every product currently on sale, keyed by id. Returns null when the catalogue
+ * is too large to load in full, so callers never mistake "not loaded" for "deleted".
+ */
+export async function listLiveProducts(): Promise<Map<string, Product> | null> {
+  const first = await listProducts({ page: 0, size: MAX_PAGE_SIZE })
+  if (first.totalPages > MAX_CATALOG_PAGES) return null
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, first.totalPages - 1) }, (_, index) =>
+      listProducts({ page: index + 1, size: MAX_PAGE_SIZE }),
+    ),
+  )
+  return new Map([first, ...rest].flatMap((page) => page.content).map((product) => [product.id, product]))
+}
+
 let categoriesRequest: Promise<Category[]> | null = null
 
 /** Categories are shared by the header, home and shop; one request serves all three. */

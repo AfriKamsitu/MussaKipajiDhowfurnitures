@@ -151,7 +151,12 @@ public class DashboardService {
                 .map(entry -> new CategorySales(entry.getKey(), entry.getValue()))
                 .toList();
 
+        // Only products that still exist: a deleted product must not resurface here.
         List<TopProduct> topSelling = unitsByProduct.entrySet().stream()
+                .filter(entry -> {
+                    Long productId = latestItem.get(entry.getKey()).getProductId();
+                    return productId != null && categoryByProduct.containsKey(productId);
+                })
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(5)
                 .map(entry -> latestItem.get(entry.getKey()))

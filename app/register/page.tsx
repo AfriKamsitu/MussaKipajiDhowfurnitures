@@ -14,11 +14,11 @@ export default function RegisterPage() {
       subtitle="Create an account to save favorites, track orders, and furnish your space."
       placement="Register Background"
       panelClassName="sm:max-w-lg"
-      image="/sofa-chesterfield.png"
+      image="/auth/sofa-set.jpg"
       images={[
-        "/about-wooden-bed.jpeg",
-        "/dining-set.png",
-        "/showroom.png",
+        "/auth/workshop.jpg",
+        "/about-outdoor-seat.jpeg",
+        "/paje-dhow-dining-table-hero.jpg",
       ]}
     >
       <Suspense fallback={null}>

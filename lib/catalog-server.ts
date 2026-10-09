@@ -22,7 +22,8 @@ async function readBackend<T>(path: string, revalidate: number): Promise<T | nul
   try {
     const response = await fetch(`${base}${path}`, {
       headers: { Accept: "application/json" },
-      next: { revalidate },
+      // The API gateway expires this tag whenever the admin changes the catalogue.
+      next: { revalidate, tags: ["catalog"] },
       signal: AbortSignal.timeout(6000),
     })
     if (!response.ok) return null
@@ -42,7 +43,7 @@ export async function getCatalogProducts(): Promise<Product[] | null> {
 }
 
 export async function getCategories(): Promise<Category[] | null> {
-  const payload = await readBackend<Record<string, unknown>[]>("/api/categories", 300)
+  const payload = await readBackend<Record<string, unknown>[]>("/api/categories", 60)
   if (!payload) return null
   return Array.isArray(payload) ? payload.map(normalizeCategory) : []
 }

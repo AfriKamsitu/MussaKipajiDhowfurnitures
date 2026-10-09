@@ -11,7 +11,7 @@ export default function ResetPasswordPage() {
     <AuthShell
       title="Reset your password"
       subtitle="Enter your email and we'll send you a link to reset it."
-      image="/sofa-lshaped.png"
+      image="/paje-dhow-dining-table-hero.jpg"
     >
       <ResetForm />
     </AuthShell>

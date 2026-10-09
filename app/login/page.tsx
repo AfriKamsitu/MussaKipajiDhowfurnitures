@@ -13,10 +13,10 @@ export default function LoginPage() {
       title="Welcome back"
       subtitle="Sign in to continue exploring handcrafted furniture for your space."
       placement="Login Background"
-      image="/hero-living-room.png"
+      image="/auth/workshop.jpg"
       images={[
         "/paje-dhow-dining-table-hero.jpg",
-        "/sofa-lshaped.png",
+        "/auth/sofa-set.jpg",
         "/about-outdoor-seat.jpeg",
       ]}
     >
