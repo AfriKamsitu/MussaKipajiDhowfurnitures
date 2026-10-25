@@ -63,6 +63,17 @@ export function TermsContent() {
         "We do not sell your personal information.",
       ],
     },
+    {
+      id: "data-deletion",
+      title: "Deleting your data",
+      points: [
+        "You can ask us to delete your account and the personal information we hold about you at any time" +
+          (settings.storeEmail ? " by emailing " + settings.storeEmail : " through our contact page") +
+          " from the email address on your account. We confirm by email once it is done.",
+        "If you signed in with Facebook or Google, you can also remove " + settings.storeName + " from the apps connected to that account. This stops us receiving any further information from it.",
+        "Orders already placed are kept as business records where the law requires it, without being linked to an account.",
+      ],
+    },
   ]
 
   return (
