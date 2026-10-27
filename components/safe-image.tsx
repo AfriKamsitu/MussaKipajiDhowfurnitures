@@ -11,7 +11,9 @@ const PLACEHOLDER = "/placeholder.svg"
  */
 export function SafeImage({ src, alt, ...props }: ImageProps) {
   const [failed, setFailed] = useState(false)
-  const usable = typeof src === "string" ? src.trim() !== "" && src !== "undefined" && src !== "null" : Boolean(src)
+  // Only site paths and web addresses can be shown; anything else (such as a
+  // file path from someone's computer) would make next/image throw.
+  const usable = typeof src === "string" ? /^(\/|https?:\/\/|data:image\/|blob:)/.test(src.trim()) : Boolean(src)
 
   useEffect(() => setFailed(false), [src])
 
