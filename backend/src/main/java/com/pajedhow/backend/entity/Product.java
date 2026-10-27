@@ -77,6 +77,9 @@ public class Product {
 
     private String material;
 
+    /** When subscribers were emailed about this product; null until it is first published. */
+    private Instant announcedAt;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 12)
     @Builder.Default

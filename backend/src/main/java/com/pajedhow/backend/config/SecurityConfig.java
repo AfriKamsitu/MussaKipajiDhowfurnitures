@@ -72,7 +72,8 @@ public class SecurityConfig {
                                 "/api/auth/social",
                                 "/api/auth/refresh",
                                 "/api/auth/password-reset/request",
-                                "/api/auth/password-reset/confirm").permitAll()
+                                "/api/auth/password-reset/confirm",
+                                "/api/marketing/unsubscribe").permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/health",
                                 "/api/products/**",

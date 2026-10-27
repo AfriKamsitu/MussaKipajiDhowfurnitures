@@ -12,6 +12,7 @@ import com.pajedhow.backend.repository.ReviewRepository;
 import com.pajedhow.backend.repository.SupplierRepository;
 import com.pajedhow.backend.util.Slugs;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,6 +31,10 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final SupplierRepository supplierRepository;
     private final ReviewRepository reviewRepository;
+    private final ApplicationEventPublisher events;
+
+    /** Raised once, when a product first becomes visible in the shop; subscribers are emailed after the commit. */
+    public record ProductPublishedEvent(Long productId) {}
 
     // ---- Public storefront reads (published only) ----
     @Transactional(readOnly = true)
@@ -90,7 +96,7 @@ public class ProductService {
         if (product.getSku() == null || product.getSku().isBlank()) {
             product.setSku(generateSku(product));
         }
-        return Mappers.toProduct(productRepository.save(product));
+        return Mappers.toProduct(announceIfFirstPublished(productRepository.save(product)));
     }
 
     @Transactional
@@ -99,7 +105,16 @@ public class ProductService {
         apply(product, req);
         if (req.colors() != null) product.setColors(new ArrayList<>(req.colors()));
         if (req.images() != null) product.setImages(normalizeImages(product.getImage(), req.images()));
-        return Mappers.toProduct(productRepository.save(product));
+        return Mappers.toProduct(announceIfFirstPublished(productRepository.save(product)));
+    }
+
+    private Product announceIfFirstPublished(Product product) {
+        if (product.getStatus() == ProductStatus.PUBLISHED && product.getAnnouncedAt() == null) {
+            product.setAnnouncedAt(Instant.now());
+            product = productRepository.save(product);
+            events.publishEvent(new ProductPublishedEvent(product.getId()));
+        }
+        return product;
     }
 
     @Transactional
