@@ -40,6 +40,7 @@ public class AuthService {
     private static final String GOOGLE_ACCESS_TOKEN_INFO_URL = "https://oauth2.googleapis.com/tokeninfo?access_token=%s";
     private static final String FACEBOOK_ME_URL = "https://graph.facebook.com/me?fields=id,name,email,picture";
     private static final String FACEBOOK_DEBUG_URL = "https://graph.facebook.com/debug_token?input_token=%s&access_token=%s";
+    private static final String FACEBOOK_APP_URL = "https://graph.facebook.com/app";
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -213,16 +214,25 @@ public class AuthService {
     private SocialUserInfo verifyFacebookToken(String accessToken) {
         String appId = appProperties.getOauth().getFacebookAppId();
         String appSecret = appProperties.getOauth().getFacebookAppSecret();
-        if (appId == null || appId.isBlank() || appSecret == null || appSecret.isBlank()) {
+        if (appId == null || appId.isBlank()) {
             throw new BadRequestException("Facebook login is not configured on the server.");
         }
-        JsonNode debug = fetchJson(String.format(
-                FACEBOOK_DEBUG_URL,
-                encode(accessToken),
-                encode(appId + "|" + appSecret)));
-        JsonNode data = debug.path("data");
-        if (!data.path("is_valid").asBoolean(false) || !appId.equals(data.path("app_id").asText())) {
-            throw new BadRequestException("Facebook login failed: invalid token.");
+        if (appSecret != null && !appSecret.isBlank()) {
+            JsonNode debug = fetchJson(String.format(
+                    FACEBOOK_DEBUG_URL,
+                    encode(accessToken),
+                    encode(appId + "|" + appSecret)));
+            JsonNode data = debug.path("data");
+            if (!data.path("is_valid").asBoolean(false) || !appId.equals(data.path("app_id").asText())) {
+                throw new BadRequestException("Facebook login failed: invalid token.");
+            }
+        } else {
+            // Without the app secret, ask Facebook which app the token was issued to;
+            // an invalid or expired token is refused by Facebook itself.
+            JsonNode app = fetchAuthorizedJson(FACEBOOK_APP_URL, accessToken);
+            if (!appId.equals(app.path("id").asText())) {
+                throw new BadRequestException("Facebook login failed: token was issued for another application.");
+            }
         }
 
         JsonNode response = fetchAuthorizedJson(FACEBOOK_ME_URL, accessToken);
